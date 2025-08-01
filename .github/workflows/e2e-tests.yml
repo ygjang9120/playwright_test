@@ -1,9 +1,8 @@
-name: E2E COA Validation Test
+name: Debug Schedule Test
 on:
-  workflow_dispatch:
   schedule:
-    # 한국 시간 기준 매일 오후 3시에 실행 (UTC 06:00)
-    - cron: '0 6 * * *'
+    # 5분마다 실행되도록 설정
+    - cron: '*/5 * * * *'
 
 jobs:
   test:
