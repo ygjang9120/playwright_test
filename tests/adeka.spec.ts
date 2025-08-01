@@ -117,8 +117,8 @@ import * as XLSX from 'xlsx';
 
 
 // 환경 변수에서 로그인 정보와 URL을 가져옵니다.
-const username = process.env.SPC_ID;
-const password = process.env.SPC_PASSWORD;
+const username = process.env.ADEKA_ID;
+const password = process.env.ADEKA_PASSWORD;
 const baseUrl = process.env.BASE_URL || 'https://spc.adkk.co.kr:8091';
 
 // 테스트 결과 객체의 타입을 명확하게 정의합니다.
@@ -136,7 +136,7 @@ test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
   // 'beforeAll'을 사용하여 모든 테스트 시작 전에 딱 한 번만 로그인합니다.
   test.beforeAll(async ({ browser }) => {
     if (!username || !password) {
-      throw new Error("SPC_ID 또는 SPC_PASSWORD 환경 변수가 설정되지 않았습니다. GitHub Secrets를 확인하세요.");
+      throw new Error("ADEKA_ID 또는 ADEKA_PASSWORD 환경 변수가 설정되지 않았습니다. GitHub Secrets를 확인하세요.");
     }
     const page = await browser.newPage();
     await page.goto(`${baseUrl}/login#/login`);

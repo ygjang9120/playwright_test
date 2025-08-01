@@ -56,8 +56,8 @@ jobs:
         run: npx playwright test
         env:
           # GitHub 저장소의 Settings > Secrets 에 등록한 값들을 가져옵니다.
-          SPC_ID: ${{ secrets.ADEKA_ID }}
-          SPC_PASSWORD: ${{ secrets.ADEKA_PASSWORD }}
+          ADEKA_ID: ${{ secrets.ADEKA_ID }}
+          ADEKA_PASSWORD: ${{ secrets.ADEKA_PASSWORD }}
           BASE_URL: 'https://spc.adkk.co.kr:8091'
           # CI 환경임을 명시적으로 알려줍니다.
           CI: true
