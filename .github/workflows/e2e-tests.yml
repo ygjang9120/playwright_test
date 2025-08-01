@@ -1,75 +1,57 @@
-# 워크플로우의 이름을 지정합니다. GitHub Actions 탭에 이 이름이 표시됩니다.
-name: E2E COA Validation Test
+# .github/workflows/e2e-tests.yml
 
-# 이 워크플로우가 언제 실행될지를 정의합니다.
+name: E2E COA Validation Test
 on:
-  # 1. 스케줄에 따라 실행
-  # schedule:
-    # cron 표현식을 사용하여 매일 UTC 기준 16:00 (한국 시간 새벽 1시)에 실행합니다.
-    # - cron: '0 16 * * *'
-  
-  # 2. 수동으로 실행
-  # GitHub 저장소의 Actions 탭에서 "Run workflow" 버튼을 눌러 수동으로 실행할 수 있습니다.
   workflow_dispatch:
 
-# 실행될 작업(job)들을 정의합니다.
 jobs:
-  # 'test'라는 이름의 작업을 정의합니다.
   test:
-    # 작업이 실행될 가상 환경을 지정합니다. 최신 우분투 환경을 사용합니다.
     runs-on: ubuntu-latest
-
-    # 타임아웃을 60분으로 설정하여, 테스트가 너무 오래 실행되는 것을 방지합니다.
-    ## timeout-minutes: 60
-
-    # 이 작업에서 실행될 단계(step)들을 순서대로 정의합니다.
     steps:
-      # 1. 코드 체크아웃
-      # uses 키워드는 다른 사람이 만든 액션을 가져와 사용하겠다는 의미입니다.
-      # actions/checkout@v4는 저장소의 코드를 가상 환경으로 내려받는 액션입니다.
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Node.js 환경 설정
-      # actions/setup-node@v4 액션을 사용하여 특정 버전의 Node.js를 설치합니다.
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18' # 안정적인 LTS 버전인 18.x 버전을 사용합니다.
+          node-version: '18'
 
-      # 3. 프로젝트 의존성 설치
-      # run 키워드는 쉘 명령어를 직접 실행하겠다는 의미입니다.
-      # 'npm ci'는 package-lock.json을 기반으로 의존성을 설치하여 더 빠르고 일관된 설치를 보장합니다.
       - name: Install dependencies
         run: npm ci
 
-      # 4. Playwright 브라우저 및 OS 의존성 설치
-      # Playwright 테스트에 필요한 브라우저(Chromium, Firefox, WebKit)와
-      # 리눅스 환경에 필요한 라이브러리들을 함께 설치합니다.
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      # 5. Playwright 테스트 실행
-      # 'npx playwright test' 명령어로 테스트를 실행합니다.
-      # env 블록을 통해 GitHub Secrets를 환경 변수로 안전하게 주입합니다.
+      # =================================================================
+      # [추가된 디버깅 단계]
+      # Playwright 테스트 실행 전에 환경 변수가 제대로 설정되었는지 확인합니다.
+      # =================================================================
+      - name: Debug Environment Variables
+        run: |
+          if [ -z "$ADEKA_ID" ]; then
+            echo "::error::ADEKA_ID 환경 변수가 설정되지 않았습니다!"
+          else
+            echo "::notice::ADEKA_ID 환경 변수가 성공적으로 설정되었습니다."
+          fi
+          
+          if [ -z "$ADEKA_PASSWORD" ]; then
+            echo "::error::ADEKA_PASSWORD 환경 변수가 설정되지 않았습니다!"
+          else
+            echo "::notice::ADEKA_PASSWORD 환경 변수가 성공적으로 설정되었습니다."
+          fi
+
       - name: Run Playwright tests
         run: npx playwright test
         env:
-          # GitHub 저장소의 Settings > Secrets 에 등록한 값들을 가져옵니다.
           ADEKA_ID: ${{ secrets.ADEKA_ID }}
           ADEKA_PASSWORD: ${{ secrets.ADEKA_PASSWORD }}
           BASE_URL: 'https://spc.adkk.co.kr:8091'
-          # CI 환경임을 명시적으로 알려줍니다.
           CI: true
 
-      # 6. 테스트 결과 리포트 업로드
-      # 테스트가 실패하더라도 항상 실행되도록 'if: always()' 조건을 추가합니다.
-      # 테스트 실행 후 생성된 'playwright-report' 폴더를 아티팩트로 업로드합니다.
-      # 이렇게 하면 워크플로우 실행 결과 페이지에서 리포트를 다운로드하여 확인할 수 있습니다.
       - name: Upload test report
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report
           path: playwright-report/
-          retention-days: 30 # 30일 동안 보관합니다.
+          retention-days: 30
