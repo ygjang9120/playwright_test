@@ -1,0 +1,16 @@
+# Dependencies
+/node_modules/
+
+# Playwright Test Artifacts
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/blob-report/
+
+# Test-generated files (추가)
+/downloads/
+*.png
+storageState.json
+
+# Local environment variables (선택 사항)
+.env

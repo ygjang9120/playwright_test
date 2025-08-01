@@ -1,0 +1,14 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:8091",
+      "localStorage": [
+        {
+          "name": "authToken",
+          "value": "10dd25ae-5f12-4045-88e1-ab0f3a853958"
+        }
+      ]
+    }
+  ]
+}
