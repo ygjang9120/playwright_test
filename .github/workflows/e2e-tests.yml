@@ -1,8 +1,9 @@
 name: E2E COA Validation Test
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: '0 16 * * *' # 한국 시간 기준 매일 새벽 1시
+  schedule:
+    # 한국 시간 기준 매일 오후 2시 30분에 실행 (UTC 05:30)
+    - cron: '30 5 * * *'
 
 jobs:
   test:
