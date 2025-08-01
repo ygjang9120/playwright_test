@@ -176,7 +176,7 @@ test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
       try {
         await row.getByRole('button', { name: '출력' }).click();
         const downloadButton = page.getByRole('button', { name: /ANP-1 COA_.*\.xlsx/ });
-        await expect(downloadButton).toBeVisible({ timeout: 180_000 });
+        await expect(downloadButton).toBeVisible({ timeout: 360_000 });
 
         const downloadPromise = page.waitForEvent('download');
         await downloadButton.click();

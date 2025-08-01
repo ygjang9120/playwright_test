@@ -97,8 +97,7 @@ export default defineConfig({
   fullyParallel: true,
   /* CI 환경에서 실수로 .only가 커밋되는 것을 방지합니다. */
   forbidOnly: !!process.env.CI,
-  /* CI에서는 2번, 로컬에서는 0번 재시도합니다. */
-  retries: process.env.CI ? 2 : 0,
+  retries: 0,
   /* CI 환경에서는 워커(동시 실행) 수를 1로 제한할 수 있습니다. */
   workers: process.env.CI ? 1 : undefined,
   /* HTML 리포터를 사용합니다. */
