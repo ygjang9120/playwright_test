@@ -115,7 +115,6 @@ import * as XLSX from 'xlsx';
 // 실제 아데카 URL에 대한 로그인 테스트 코드
 // ==============================================================================
 
-
 const username = process.env.ADEKA_ID;
 const password = process.env.ADEKA_PASSWORD;
 const baseUrl = process.env.BASE_URL || 'https://spc.adkk.co.kr:8091';
@@ -167,8 +166,10 @@ test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
       try {
         await row.getByRole('button', { name: '출력' }).click();
         
+        await page.waitForLoadState('networkidle', { timeout: 120_000 });
+        
         const downloadButtons = page.getByRole('button', { name: /ANP-1 COA_.*\.xlsx/ });
-        await expect(downloadButtons.first()).toBeVisible({ timeout: 180_000 });
+        await expect(downloadButtons.first()).toBeVisible({ timeout: 60_000 });
 
         const downloadPromise = page.waitForEvent('download');
         await downloadButtons.first().click();
@@ -219,23 +220,28 @@ test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
       }
     }
 
+    // --- 최종 결과 처리 블록 ---
     console.log('\n--- 최종 테스트 결과 요약 ---');
     console.log(JSON.stringify(results, null, 2));
 
+    // [추가됨] 워크플로우에서 사용할 수 있도록 결과를 파일로 저장합니다.
+    const summaryDir = 'test-results';
+    if (!fs.existsSync(summaryDir)) {
+      fs.mkdirSync(summaryDir);
+    }
+    fs.writeFileSync(path.join(summaryDir, 'summary.json'), JSON.stringify(results, null, 2));
+
+
     const failures = results.filter(r => r.status === 'failure');
     if (failures.length > 0) {
-      // [수정됨] 쉘에서 오류를 발생시킬 수 있는 개행 문자 및 특수 문자를 제거하여 안전한 문자열로 만듭니다.
-      const failureDetails = failures.map(f => {
-        const sanitizedError = (f.error || '알 수 없는 오류').replace(/(\r\n|\n|\r)/gm, " ").replace(/"/g, "'");
-        return `  - 제품: ${f.productName}, LOT: ${f.lotNumber}, 오류: ${sanitizedError}`;
-      }).join('\n');
-      
-      throw new Error(`테스트 실패. 총 ${failures.length}개의 LOT에서 오류가 발생했습니다:\n${failureDetails}`);
+      console.error('\n\n==================== TEST FAILURE DETAILS ====================');
+      const failureDetails = failures.map(f => `  - 제품: ${f.productName}, LOT: ${f.lotNumber}, 오류: ${f.error}`).join('\n');
+      console.error(`총 ${failures.length}개의 LOT에서 오류가 발생했습니다:\n${failureDetails}`);
+      console.error('============================================================\n');
+
+      throw new Error(`E2E test failed for ${failures.length} LOT(s). Check logs for details.`);
     } else {
       console.log(`🎉 모든 ${results.length}개의 LOT 테스트를 성공적으로 완료했습니다!`);
     }
   });
 });
-
-
-
