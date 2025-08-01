@@ -1,87 +1,120 @@
-import { defineConfig, devices } from '@playwright/test';
+// import { defineConfig, devices } from '@playwright/test';
 
-/**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-// import dotenv from 'dotenv';
-// import path from 'path';
-// dotenv.config({ path: path.resolve(__dirname, '.env') });
+// /**
+//  * Read environment variables from file.
+//  * https://github.com/motdotla/dotenv
+//  */
+// // import dotenv from 'dotenv';
+// // import path from 'path';
+// // dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+// /**
+//  * See https://playwright.dev/docs/test-configuration.
+//  */
+// export default defineConfig({
+//   timeout: 3 * 60 * 1000, // 3분 (밀리초 단위)
+
+//   // expect의 타임아웃도 넉넉하게 설정해 줄 수 있습니다.
+//   expect: {
+//     timeout: 15 * 1000, // 15초
+//   },
+  
+//   testDir: './tests',
+//   /* Run tests in files in parallel */
+//   fullyParallel: true,
+//   /* Fail the build on CI if you accidentally left test.only in the source code. */
+//   forbidOnly: !!process.env.CI,
+//   /* Retry on CI only */
+//   retries: process.env.CI ? 2 : 0,
+//   /* Opt out of parallel tests on CI. */
+//   workers: process.env.CI ? 1 : undefined,
+//   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+//   reporter: 'html',
+//   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+//   use: {
+//     /* Base URL to use in actions like `await page.goto('/')`. */
+//     // baseURL: 'http://localhost:3000',
+
+//     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+//     trace: 'on-first-retry',
+//     baseURL: 'http://127.0.0.1:8091',   // ← ITP 우회 위해 localhost → 127.0.0.1
+//     ignoreHTTPSErrors: true,            // 백엔드 HTTPS(자체서명) 오류 무시
+//     storageState: 'playwright/.auth/user.json',  // ① 단계에서 생성
+//     // video: 'on-first-retry',   // 비디오 녹화 설정 (선택 사항) 
+//     // screenshot: 'only-on-failure',      // 실패 시에만 스크린
+
+//   },
+
+//   /* Configure projects for major browsers */
+//   projects: [
+//     /* 1. 인증 Setup 프로젝트 설정 */
+//     { name: 'setup', testMatch: /.*\.setup\.ts/ },
+
+//     /* 2. 실제 테스트 프로젝트 설정 */
+//     {
+//       name: 'chromium',
+//       use: {
+//         ...devices['Desktop Chrome'],
+//         // setup 프로젝트에서 생성한 인증 파일을 사용
+//         storageState: 'playwright/.auth/user.json',
+//       },
+//       dependencies: ['setup'], // setup이 먼저 실행되도록 의존성 설정
+//     },
+//     {
+//       name: 'firefox',
+//       use: {
+//         ...devices['Desktop Firefox'],
+//         storageState: 'playwright/.auth/user.json',
+//       },
+//       dependencies: ['setup'],
+//     },
+//     {
+//       name: 'webkit',
+//       use: {
+//         ...devices['Desktop Safari'],
+//         storageState: 'playwright/.auth/user.json',
+//       },
+//       dependencies: ['setup'],
+//     },
+//   ],
+
+//   /* Run your local dev server before starting the tests */
+//   // webServer: {
+//   //   command: 'npm run start',
+//   //   url: 'http://localhost:3000',
+//   //   reuseExistingServer: !process.env.CI,
+//   // },
+// });
+
+import { defineConfig, devices } from '@playwright/test';
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
-  timeout: 3 * 60 * 1000, // 3분 (밀리초 단위)
-
-  // expect의 타임아웃도 넉넉하게 설정해 줄 수 있습니다.
-  expect: {
-    timeout: 15 * 1000, // 15초
-  },
-  
   testDir: './tests',
-  /* Run tests in files in parallel */
+  /* 모든 테스트를 병렬로 실행합니다. CI 환경에서는 비활성화할 수 있습니다. */
   fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
+  /* CI 환경에서 실수로 .only가 커밋되는 것을 방지합니다. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
+  /* CI에서는 2번, 로컬에서는 0번 재시도합니다. */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
+  /* CI 환경에서는 워커(동시 실행) 수를 1로 제한할 수 있습니다. */
   workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
+  /* HTML 리포터를 사용합니다. */
   reporter: 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    // baseURL: 'http://localhost:3000',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    /* 모든 액션에 대한 추적 파일을 수집합니다. 'on-first-retry'는 첫 재시도 시에만 수집합니다. */
     trace: 'on-first-retry',
-    baseURL: 'http://127.0.0.1:8091',   // ← ITP 우회 위해 localhost → 127.0.0.1
-    ignoreHTTPSErrors: true,            // 백엔드 HTTPS(자체서명) 오류 무시
-    storageState: 'playwright/.auth/user.json',  // ① 단계에서 생성
-    // video: 'on-first-retry',   // 비디오 녹화 설정 (선택 사항) 
-    // screenshot: 'only-on-failure',      // 실패 시에만 스크린
-
   },
 
-  /* Configure projects for major browsers */
+  /* 테스트할 브라우저들을 설정합니다. */
   projects: [
-    /* 1. 인증 Setup 프로젝트 설정 */
-    { name: 'setup', testMatch: /.*\.setup\.ts/ },
-
-    /* 2. 실제 테스트 프로젝트 설정 */
     {
       name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-        // setup 프로젝트에서 생성한 인증 파일을 사용
-        storageState: 'playwright/.auth/user.json',
-      },
-      dependencies: ['setup'], // setup이 먼저 실행되도록 의존성 설정
-    },
-    {
-      name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-        storageState: 'playwright/.auth/user.json',
-      },
-      dependencies: ['setup'],
-    },
-    {
-      name: 'webkit',
-      use: {
-        ...devices['Desktop Safari'],
-        storageState: 'playwright/.auth/user.json',
-      },
-      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'] },
     },
   ],
-
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
 });
+
