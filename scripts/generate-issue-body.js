@@ -37,7 +37,7 @@ try {
   const successRate = total > 0 ? (successCount / total * 100).toFixed(2) : '100.00';
 
   // 3. 마크다운 본문 생성
-  let summaryMarkdown = `## 📈 E2E 테스트 결과 요약\n\n`;
+  let summaryMarkdown = `## E2E 테스트 결과 요약\n\n`;
   summaryMarkdown += `- **총 LOT 수:** ${total}개\n`;
   summaryMarkdown += `- **성공:** ${successCount}개\n`;
   summaryMarkdown += `- **실패:** ${failures.length}개\n`;
@@ -45,7 +45,7 @@ try {
 
   // 4. 실패 항목이 있을 경우 상세 내역 추가
   if (failures.length > 0) {
-    summaryMarkdown += '### ❌ 실패 항목 상세\n\n';
+    summaryMarkdown += '### 실패 항목 상세\n\n';
     summaryMarkdown += '| 제품명 | LOT 번호 | 실패 사유 |\n';
     summaryMarkdown += '|---|---|---|\n';
     failures.forEach(f => {
