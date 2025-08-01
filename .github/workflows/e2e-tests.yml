@@ -7,6 +7,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -42,12 +45,12 @@ jobs:
 
       # [기존과 동일] 테스트 실패 시 GitHub 이슈 생성
       - name: Create GitHub Issue on Failure
-        if: steps.playwright_test.outcome == 'failure' # 'Run Playwright tests' 단계가 실패했을 때만 실행
-        uses: actions-ecosystem/action-create-issue@v1
+        if: steps.playwright_test.outcome == 'failure'
+        uses: peter-evans/create-issue-from-file@v5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           title: "🚨 [자동화 테스트 실패] COA 검증 오류 발생 (${{ github.run_number }})"
-          body_path: ./issue-body.md
+          content-filepath: ./issue-body.md
           labels: |
             bug
             automated-test
