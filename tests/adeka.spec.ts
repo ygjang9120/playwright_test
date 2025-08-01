@@ -116,24 +116,20 @@ import * as XLSX from 'xlsx';
 // ==============================================================================
 
 
-// 환경 변수에서 로그인 정보와 URL을 가져옵니다.
 const username = process.env.ADEKA_ID;
 const password = process.env.ADEKA_PASSWORD;
 const baseUrl = process.env.BASE_URL || 'https://spc.adkk.co.kr:8091';
 
-// 테스트 결과 객체의 타입을 명확하게 정의합니다.
 type TestResult = {
   status: 'success' | 'failure';
   productName: string;
   lotNumber: string;
-  file?: string;      // 성공 시에만 존재
-  error?: string;     // 실패 시에만 존재
+  file?: string;
+  error?: string;
 };
 
-// 관련된 테스트들을 하나의 'describe' 블록으로 그룹화합니다.
 test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
 
-  // 'beforeAll'을 사용하여 모든 테스트 시작 전에 딱 한 번만 로그인합니다.
   test.beforeAll(async ({ browser }) => {
     if (!username || !password) {
       throw new Error("ADEKA_ID 또는 ADEKA_PASSWORD 환경 변수가 설정되지 않았습니다. GitHub Secrets를 확인하세요.");
@@ -149,25 +145,20 @@ test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
     await page.close();
   });
 
-  // 모든 LOT를 순회하며 검증하는 메인 테스트
   test('ANP-1 제품의 모든 LOT 검증', async ({ browser }) => {
-    test.setTimeout(1800_000); // 전체 테스트 시간이 길 수 있으므로 타임아웃을 30분으로 넉넉하게 설정
+    test.setTimeout(1800_000);
 
     const context = await browser.newContext({ storageState: 'storageState.json' });
     const page = await context.newPage();
 
-    // 1. ANP-1 출하관리 페이지로 이동
     await page.goto(`${baseUrl}/#/process/shipout/anp-1`, { waitUntil: 'networkidle' });
     await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 20_000 });
 
-    // 2. 페이지의 모든 LOT 행(row)을 가져옵니다.
     const lotRows = await page.locator('tbody > tr').all();
     console.log(`총 ${lotRows.length}개의 LOT를 대상으로 테스트를 시작합니다.`);
 
-    // 3. 각 LOT의 테스트 결과를 저장할 배열
     const results: TestResult[] = [];
 
-    // 4. for...of 반복문을 사용하여 각 행을 순서대로 테스트합니다.
     for (const [index, row] of lotRows.entries()) {
       const lotNumber = await row.locator('td').nth(1).textContent() || '알 수 없음';
       const productName = 'ANP-1';
@@ -175,11 +166,12 @@ test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
 
       try {
         await row.getByRole('button', { name: '출력' }).click();
-        const downloadButton = page.getByRole('button', { name: /ANP-1 COA_.*\.xlsx/ });
-        await expect(downloadButton).toBeVisible({ timeout: 360_000 });
+        
+        const downloadButtons = page.getByRole('button', { name: /ANP-1 COA_.*\.xlsx/ });
+        await expect(downloadButtons.first()).toBeVisible({ timeout: 180_000 });
 
         const downloadPromise = page.waitForEvent('download');
-        await downloadButton.click();
+        await downloadButtons.first().click();
         const download = await downloadPromise;
 
         const downloadsPath = path.join(process.cwd(), 'downloads');
@@ -192,8 +184,6 @@ test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
 
         const workbook = XLSX.readFile(filePath);
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        
-        // [수정됨] sheet_to_json의 결과를 안전하게 string 배열로 변환합니다.
         const data: string[] = (XLSX.utils.sheet_to_json(worksheet, { header: 1 }).flat() as any[]).map(String);
 
         const targetElements = ['F_AL', 'F_Ca', 'F_Cr'];
@@ -218,6 +208,12 @@ test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
 
       } catch (error) {
         console.error(`❌ [실패] 제품: ${productName}, LOT: ${lotNumber}, 오류: ${(error as Error).message}`);
+        
+        const sanitizedLot = lotNumber.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const screenshotPath = `test-results/failure-${productName}-${sanitizedLot}.png`;
+        await page.screenshot({ path: screenshotPath, fullPage: true });
+        console.log(`디버깅을 위해 스크린샷 저장: ${screenshotPath}`);
+        
         results.push({ status: 'failure', productName, lotNumber, error: (error as Error).message });
         await page.reload({ waitUntil: 'networkidle' });
       }
@@ -228,8 +224,12 @@ test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
 
     const failures = results.filter(r => r.status === 'failure');
     if (failures.length > 0) {
-      const failureDetails = failures.map(f => `  - 제품: ${f.productName}, LOT: ${f.lotNumber}, 오류: ${f.error}`).join('\n');
-      // [수정됨] expect.fail 대신, 명확한 에러 메시지와 함께 Error를 발생시켜 테스트를 실패시킵니다.
+      // [수정됨] 쉘에서 오류를 발생시킬 수 있는 개행 문자 및 특수 문자를 제거하여 안전한 문자열로 만듭니다.
+      const failureDetails = failures.map(f => {
+        const sanitizedError = (f.error || '알 수 없는 오류').replace(/(\r\n|\n|\r)/gm, " ").replace(/"/g, "'");
+        return `  - 제품: ${f.productName}, LOT: ${f.lotNumber}, 오류: ${sanitizedError}`;
+      }).join('\n');
+      
       throw new Error(`테스트 실패. 총 ${failures.length}개의 LOT에서 오류가 발생했습니다:\n${failureDetails}`);
     } else {
       console.log(`🎉 모든 ${results.length}개의 LOT 테스트를 성공적으로 완료했습니다!`);
