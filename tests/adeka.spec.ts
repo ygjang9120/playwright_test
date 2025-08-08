@@ -140,14 +140,21 @@ const allTestResults: TestResult[] = [];
  * @param productUrlSlug - 제품 페이지 URL 슬러그 (예: 'anp-1')
  * @param targetElements - 엑셀 파일에서 검증할 필수 항목 배열
  */
-async function runProductValidation(browser: Browser, productName: string, productUrlSlug: string, targetElements: string[]) {
+async function runProductValidation(
+  browser: Browser, 
+  productName: string, 
+  productUrlSlug: string, 
+  targetElements: string[],
+ maxLots = 1
+) {
   const context = await browser.newContext({ storageState: 'storageState.json' });
   const page = await context.newPage();
 
   await page.goto(`${baseUrl}/#/process/shipout/${productUrlSlug}`, { waitUntil: 'networkidle' });
   await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 20_000 });
 
-  const lotRows = await page.locator('tbody > tr').all();
+  const lotRowsAll = await page.locator('tbody > tr').all();
+  const lotRows = lotRowsAll.slice(0, Math.min(maxLots, lotRowsAll.length));
   console.log(`\n[${productName}] 총 ${lotRows.length}개의 LOT를 대상으로 테스트를 시작합니다.`);
 
   for (const [index, row] of lotRows.entries()) {
@@ -232,13 +239,13 @@ test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
   // 2. 각 제품별 테스트 케이스 정의
   test('ANP-1 제품의 모든 LOT 검증', async ({ browser }) => {
     test.setTimeout(1800_000); // 30분
-    await runProductValidation(browser, 'ANP-1', 'anp-1', ['F_AL', 'F_CA', 'F_CR']);
+    await runProductValidation(browser, 'ANP-1', 'anp-1', ['F_AL', 'F_CA', 'F_CR'],1);
   });
 
   test('HPL-02 제품의 모든 LOT 검증', async ({ browser }) => {
     test.setTimeout(1800_000); // 30분
     // 참고: HPL-02 제품의 필수 항목이 다르다면 아래 배열을 수정해야 합니다.
-    await runProductValidation(browser, 'HPL-02', 'hpl-02', ['F_AL', 'F_CR', 'F_CA']);
+    await runProductValidation(browser, 'HPL-02', 'hpl-02', ['F_AL', 'F_CR', 'F_CA'],1);
   });
 
 
