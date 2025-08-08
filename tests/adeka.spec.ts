@@ -248,12 +248,12 @@ test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
 
   test('TMA-F 제품의 모든 LOT 검증', async ({ browser }) => {
     test.setTimeout(1800_000);
-    await runProductValidation(browser, 'TMA-F', 'tma-f', ['F_AS','F_BA','F_CA'], 1);
+    await runProductValidation(browser, 'TMA-F', 'tma-f', ['R_AS','R_BA','R_CA'], 1);
   });
 
-  test('SFA-1 (HHK-3) 제품의 모든 LOT 검증', async ({ browser }) => {
+  test('SFA-1 (HK-3) 제품의 모든 LOT 검증', async ({ browser }) => {
     test.setTimeout(1800_000);
-    await runProductValidation(browser, 'SFA-1 (HHK-3)', 'sfa-1-3', ['F_AS','F_BA','F_CA'], 1);
+    await runProductValidation(browser, 'SFA-1 (HK-3)', 'sfa-1-3', ['F_AL','F_BA','F_CA'], 1);
   });
 
   test('NCE-2 제품의 모든 LOT 검증', async ({ browser }) => {
