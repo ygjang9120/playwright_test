@@ -1,14 +1,14 @@
 name: ADEKA-COA Schedule Test
 on:
-#  workflow_dispatch:
-#     inputs:
-#       grep:
-#         description: 'Playwright -g 패턴(예: "ANP-1 제품")'
-#         required: false
-#         default: ''
-  schedule:
+ workflow_dispatch:
+    inputs:
+      grep:
+        description: 'Playwright -g 패턴(예: "ANP-1 제품")'
+        required: false
+        default: ''
+  # schedule:
     
-    - cron: '0 8 * * *'
+  #   - cron: '0 8 * * *'
 
 jobs:
   test:
