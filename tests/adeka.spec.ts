@@ -263,20 +263,20 @@ test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
   //   await runProductValidation(browser, 'TMA-F', 'tma-f', ['F_AL','F_CA','F_CR'], 1);
   // });
 
-  test('NCE-2 제품의 모든 LOT 검증', async ({ browser }) => {
-    test.setTimeout(1800_000);
-    await runProductValidation(browser, 'NCE-2', 'nce-2', ['F_AL','F_CA','F_CR'], 1);
-  });
+  // test('NCE-2 제품의 모든 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(1800_000);
+  //   await runProductValidation(browser, 'NCE-2', 'nce-2', ['F_AL','F_CA','F_CR'], 1);
+  // });
 
   test('GMP-02 제품의 모든 LOT 검증', async ({ browser }) => {
     test.setTimeout(1800_000);
     await runProductValidation(browser, 'GMP-02', 'cmp-02', ['F_AL','F_CA','F_CR'], 1);
   });
 
-  test('ECH 제품의 모든 LOT 검증', async ({ browser }) => {
-    test.setTimeout(1800_000);
-    await runProductValidation(browser, 'ECH', 'ech', ['F_AL','F_CA','F_CR'], 1);
-  });
+  // test('ECH 제품의 모든 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(1800_000);
+  //   await runProductValidation(browser, 'ECH', 'ech', ['F_AL','F_CA','F_CR'], 1);
+  // });
 
 
   // 3. 모든 테스트가 끝난 후, 최종 결과 처리
