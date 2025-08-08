@@ -151,8 +151,6 @@ async function runProductValidation(
   const page = await context.newPage();
 
   await page.goto(`${baseUrl}/#/process/shipout/${productUrlSlug}`, { waitUntil: 'networkidle' });
-  const firstRow = page.locator('tbody > tr').first();
-  await firstRow.scrollIntoViewIfNeeded();
   await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 20_000 });
 
   const lotRowsAll = await page.locator('tbody > tr').all();
