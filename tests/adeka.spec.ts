@@ -272,7 +272,7 @@ test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
 
   test('GMP-02 제품의 모든 LOT 검증', async ({ browser }) => {
     test.setTimeout(1800_000);
-    await runProductValidation(browser, 'GMP-02', 'cmp-02', ['F_AL','F_CA','F_CR'], 1);
+    await runProductValidation(browser, 'GMP-02', 'gmp-02', ['F_AL','F_CA','F_CR'], 1);
   });
 
   // test('ECH 제품의 모든 LOT 검증', async ({ browser }) => {
