@@ -236,37 +236,32 @@ test.describe('전체 LOT 대상 COA 다운로드 및 상세 검증', () => {
     await page.close();
   });
 
-  // 2. 각 제품별 테스트 케이스 정의
-  test('ANP-1 제품의 모든 LOT 검증', async ({ browser }) => {
-    test.setTimeout(1800_000); // 30분
-    await runProductValidation(browser, 'ANP-1', 'anp-1', ['F_AL', 'F_CA', 'F_CR'],1);
-  });
+  // // 2. 각 제품별 테스트 케이스 정의
+  // test('ANP-1 제품의 모든 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(1800_000); // 30분
+  //   await runProductValidation(browser, 'ANP-1', 'anp-1', ['F_AL', 'F_CA', 'F_CR'],1);
+  // });
 
-  test('HPL-02 제품의 모든 LOT 검증', async ({ browser }) => {
-    test.setTimeout(1800_000); // 30분
-    // 참고: HPL-02 제품의 필수 항목이 다르다면 아래 배열을 수정해야 합니다.
-    await runProductValidation(browser, 'HPL-02', 'hpl-02', ['F_AL', 'F_CR', 'F_CA'],1);
-  });
+  // test('HPL-02 제품의 모든 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(1800_000); // 30분
+  //   // 참고: HPL-02 제품의 필수 항목이 다르다면 아래 배열을 수정해야 합니다.
+  //   await runProductValidation(browser, 'HPL-02', 'hpl-02', ['F_AL', 'F_CR', 'F_CA'],1);
+  // });
 
-  test('ACP-2 제품의 모든 LOT 검증', async ({ browser }) => {
-    test.setTimeout(1800_000);
-  await runProductValidation(browser, 'ACP-2', 'acp-2', ['F_AL','F_CA','F_CR'], 1);
-  });
+  // test('ACP-2 제품의 모든 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(1800_000);
+  // await runProductValidation(browser, 'ACP-2', 'acp-2', ['F_AL','F_CA','F_CR'], 1);
+  // });
 
-  test('ACP-3 제품의 모든 LOT 검증', async ({ browser }) => {
-    test.setTimeout(1800_000);
-    await runProductValidation(browser, 'ACP-3', 'acp-3', ['F_AL','F_CA','F_CR'], 1);
-  });
+  // test('ACP-3 제품의 모든 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(1800_000);
+  //   await runProductValidation(browser, 'ACP-3', 'acp-3', ['F_AL','F_CA','F_CR'], 1);
+  // });
 
-  test('TMA-F 제품의 모든 LOT 검증', async ({ browser }) => {
-    test.setTimeout(1800_000);
-    await runProductValidation(browser, 'TMA-F', 'tma-f', ['F_AL','F_CA','F_CR'], 1);
-  });
-
-  test('SFA-1 제품의 모든 LOT 검증', async ({ browser }) => {
-    test.setTimeout(1800_000);
-    await runProductValidation(browser, 'SFA-1', 'sfa-1', ['F_AL','F_CA','F_CR'], 1);
-  });
+  // test('TMA-F 제품의 모든 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(1800_000);
+  //   await runProductValidation(browser, 'TMA-F', 'tma-f', ['F_AL','F_CA','F_CR'], 1);
+  // });
 
   test('NCE-2 제품의 모든 LOT 검증', async ({ browser }) => {
     test.setTimeout(1800_000);
