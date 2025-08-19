@@ -119,40 +119,40 @@ test.describe('전체 LOT 대상 COA 다운로드 및 저장 검증', () => {
     await runProductValidation(browser, 'ACP-2', 'acp-2', 3);
   });
 
-  // test('ACP-3 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(1800_000);
-  //   await runProductValidation(browser, 'ACP-3', 'acp-3', 3);
-  // });
+  test('ACP-3 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(1800_000);
+    await runProductValidation(browser, 'ACP-3', 'acp-3', 3);
+  });
 
-  // test('TMA-F 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(1800_000);
-  //   await runProductValidation(browser, 'TMA-F', 'tma-f', 3);
-  // });
+  test('TMA-F 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(1800_000);
+    await runProductValidation(browser, 'TMA-F', 'tma-f', 3);
+  });
 
-  // test('NCE-2 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(1800_000);
-  //   await runProductValidation(browser, 'NCE-2', 'nce-2', 3);
-  // });
+  test('NCE-2 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(1800_000);
+    await runProductValidation(browser, 'NCE-2', 'nce-2', 3);
+  });
 
-  // test('GMP-02 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(1800_000);
-  //   await runProductValidation(browser, 'GMP-02', 'gmp-02', 3);
-  // });
+  test('GMP-02 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(1800_000);
+    await runProductValidation(browser, 'GMP-02', 'gmp-02', 3);
+  });
 
-  // test('ECH 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(1800_000);
-  //   await runProductValidation(browser, 'ECH', 'ech', 3);
-  // });
+  test('ECH 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(1800_000);
+    await runProductValidation(browser, 'ECH', 'ech', 3);
+  });
 
-  // test('ANP-1 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(1800_000);
-  //   await runProductValidation(browser, 'ANP-1', 'anp-1', 3);
-  // });
+  test('ANP-1 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(1800_000);
+    await runProductValidation(browser, 'ANP-1', 'anp-1', 3);
+  });
 
-  // test('HPL-02 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(1800_000);
-  //   await runProductValidation(browser, 'HPL-02', 'hpl-02', 3);
-  // });
+  test('HPL-02 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(1800_000);
+    await runProductValidation(browser, 'HPL-02', 'hpl-02', 3);
+  });
 
 
   // 3. 모든 테스트가 끝난 후, 최종 결과 처리 및 상세 리포트 파일 생성
