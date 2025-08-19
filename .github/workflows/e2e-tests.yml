@@ -1,14 +1,14 @@
 name: ADEKA-COA Schedule Test
 on:
-#  workflow_dispatch:
-#     inputs:
-#       grep:
-#         description: 'Playwright -g 패턴(예: "ANP-1 제품")'
-#         required: false
-#         default: ''
-  schedule:
+ workflow_dispatch:
+    inputs:
+      grep:
+        description: 'Playwright -g 패턴(예: "ANP-1 제품")'
+        required: false
+        default: ''
+  # schedule:
     
-    - cron: '0 8 * * *'
+  #   - cron: '0 8 * * *'
 
 jobs:
   test:
@@ -53,8 +53,8 @@ jobs:
       - name: Notify Telegram - Success
         if: steps.playwright_test.outcome == 'success'
         run: |
-          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MSG="✅ COA 테스트 성공"
+          # success-message.txt 파일의 내용을 읽어 MSG 변수에 저장
+          MSG=$(cat test-results/success-message.txt)
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d message_thread_id="${{ secrets.TELEGRAM_THREAD_ID }}" \
@@ -77,7 +77,9 @@ jobs:
         if: steps.playwright_test.outcome == 'failure'
         run: |
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MSG="<b>❌ COA 에러</b> <a href=\"${RUN_URL}\">#${{ github.run_number }}</a> 상세: 실행 로그/리포트 확인"
+          # failure-message.txt 파일의 내용을 읽어와 메시지 구성
+          FAILURE_DETAILS=$(cat test-results/failure-message.txt)
+          MSG="<b>${FAILURE_DETAILS}</b>\n\n<a href=\"${RUN_URL}\">#${{ github.run_number }} 실행 로그/리포트 확인</a>"
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d message_thread_id="${{ secrets.TELEGRAM_THREAD_ID }}" \
