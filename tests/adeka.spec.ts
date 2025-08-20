@@ -63,8 +63,9 @@ async function runProductValidation(
     }
   }
 
-
   const finalLotRows = await page.locator('tbody > tr').all();
+  // ▼▼▼ 이 로그를 추가하면 혼동을 줄일 수 있습니다. ▼▼▼
+  console.log(`[정보] 스크롤 종료 후, 최종적으로 ${finalLotRows.length}개의 LOT가 발견되었습니다.`);
   const lotRowsToTest = finalLotRows.slice(0, Math.min(maxLots, finalLotRows.length));
   console.log(`\n[${productName}] 총 ${lotRowsToTest.length}개의 LOT를 대상으로 다운로드 테스트를 시작합니다.`);
 
@@ -163,40 +164,40 @@ test.describe('전체 LOT 대상 COA 다운로드 및 저장 검증', () => {
     await runProductValidation(browser, 'ACP-2', 'acp-2', 30);
   });
 
-  // test('ACP-3 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(18000_000);
-  //   await runProductValidation(browser, 'ACP-3', 'acp-3', 30);
-  // });
+  test('ACP-3 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'ACP-3', 'acp-3', 30);
+  });
 
-  // test('TMA-F 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(18000_000);
-  //   await runProductValidation(browser, 'TMA-F', 'tma-f', 30);
-  // });
+  test('TMA-F 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'TMA-F', 'tma-f', 30);
+  });
 
-  // test('NCE-2 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(18000_000);
-  //   await runProductValidation(browser, 'NCE-2', 'nce-2', 30);
-  // });
+  test('NCE-2 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'NCE-2', 'nce-2', 30);
+  });
 
-  // test('GMP-02 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(18000_000);
-  //   await runProductValidation(browser, 'GMP-02', 'gmp-02', 30);
-  // });
+  test('GMP-02 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'GMP-02', 'gmp-02', 30);
+  });
 
-  // test('ECH 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(18000_000);
-  //   await runProductValidation(browser, 'ECH', 'ech', 30);
-  // });
+  test('ECH 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'ECH', 'ech', 30);
+  });
 
-  // test('ANP-1 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(18000_000);
-  //   await runProductValidation(browser, 'ANP-1', 'anp-1', 30);
-  // });
+  test('ANP-1 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'ANP-1', 'anp-1', 30);
+  });
 
-  // test('HPL-02 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(18000_000);
-  //   await runProductValidation(browser, 'HPL-02', 'hpl-02', 30);
-  // });
+  test('HPL-02 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'HPL-02', 'hpl-02', 30);
+  });
 
 
   test.afterAll(async () => {
@@ -209,14 +210,16 @@ test.describe('전체 LOT 대상 COA 다운로드 및 저장 검증', () => {
     const failures = allTestResults.filter(r => r.status === 'failure');
 
     if (successes.length > 0) {
-      const successDetails = successes.map(s => `  - 제품: ${s.productName}, LOT: ${s.lotNumber}`).join('\n');
+      // const successDetails = successes.map(s => `  - 제품: ${s.productName}, LOT: ${s.lotNumber}`).join('\n');
+      const successDetails = successes.map(s => `LOT: ${s.lotNumber}`).join('\n');
       const successMessage = `✅ COA 테스트 성공 (${successes.length}건)\n${successDetails}`;
       fs.writeFileSync(path.join(summaryDir, 'success-message.txt'), successMessage);
       console.log('\n' + successMessage);
     }
 
     if (failures.length > 0) {
-      const failureDetails = failures.map(f => `  - 제품: ${f.productName}, LOT: ${f.lotNumber}, 오류: ${f.error}`).join('\n');
+      // const failureDetails = failures.map(f => `  - 제품: ${f.productName}, LOT: ${f.lotNumber}, 오류: ${f.error}`).join('\n');
+      const failureDetails = failures.map(f => `LOT: ${f.lotNumber}`).join('\n');
       const failureMessage = `❌ COA 에러 발생 (${failures.length}건)\n${failureDetails}`;
       fs.writeFileSync(path.join(summaryDir, 'failure-message.txt'), failureMessage);
       console.error('\n\n==================== TEST FAILURE DETAILS ====================\n' + failureMessage + '\n============================================================\n');
