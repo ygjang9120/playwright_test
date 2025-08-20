@@ -37,7 +37,7 @@ async function runProductValidation(
   await page.goto(`${baseUrl}/#/process/shipout/${productUrlSlug}`, { waitUntil: 'networkidle' });
   await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 30_000 });
 
-  // [수정됨] 더 안정적인 스크롤 로직으로 변경
+  // 더 안정적인 스크롤 로직으로 변경
   let previousLotCount = -1;
   while (true) {
     const lotRows = page.locator('tbody > tr');
@@ -50,15 +50,13 @@ async function runProductValidation(
     previousLotCount = currentLotCount;
     console.log(`[${productName}] 현재 ${currentLotCount}개 LOT 발견. 더 불러오기 위해 마지막 항목으로 스크롤합니다...`);
 
-    // 현재 리스트의 마지막 항목이 화면에 보이도록 스크롤합니다.
     await lotRows.last().scrollIntoViewIfNeeded();
 
-    // 새 데이터가 로드되고 네트워크 활동이 안정될 때까지 기다립니다.
     try {
-      await page.waitForLoadState('networkidle', { timeout: 10000 }); // 10초 대기
+      await page.waitForLoadState('networkidle', { timeout: 10000 });
     } catch (e) {
       console.log('[정보] 네트워크 대기 시간 초과. 데이터 로딩이 완료된 것으로 간주합니다.');
-      break; // 타임아웃 발생 시, 더 이상 로드할 데이터가 없는 것으로 판단하고 중단
+      break;
     }
   }
 
@@ -84,14 +82,21 @@ async function runProductValidation(
       await downloadButtons.first().click();
       const download = await downloadPromise;
 
+      // [수정됨] 덮어쓰기를 방지하기 위해 고유한 파일 이름을 생성합니다.
+      const sanitizedLotNumber = lotNumber.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const originalFileName = download.suggestedFilename();
+      const fileExtension = path.extname(originalFileName) || '.xlsx';
+      const uniqueFileName = `${productName}_${sanitizedLotNumber}${fileExtension}`;
+      
       const downloadsPath = path.join(process.cwd(), 'downloads');
       if (!fs.existsSync(downloadsPath)) fs.mkdirSync(downloadsPath, { recursive: true });
-      const filePath = path.join(downloadsPath, download.suggestedFilename());
+      const filePath = path.join(downloadsPath, uniqueFileName);
       await download.saveAs(filePath);
 
       expect(fs.existsSync(filePath)).toBe(true);
       console.log(`[성공] 파일 다운로드 및 저장 완료: ${filePath}`);
-      allTestResults.push({ status: 'success', productName, lotNumber, file: download.suggestedFilename() });
+      // 리포트에도 고유한 파일 이름을 기록합니다.
+      allTestResults.push({ status: 'success', productName, lotNumber, file: uniqueFileName });
 
     } catch (error) {
       console.error(`[실패] 제품: ${productName}, LOT: ${lotNumber}, 오류: ${(error as Error).message}`);
