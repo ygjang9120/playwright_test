@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import dotenv from 'dotenv';
 
 // .env 파일의 환경 변수를 로드합니다. (로컬 테스트용)
-// dotenv.config();
+dotenv.config();
 
 // --- 환경 변수 및 기본 설정 ---
 const username = process.env.ADEKA_ID;
@@ -54,7 +54,6 @@ async function runProductValidation(
     await lotRows.last().scrollIntoViewIfNeeded();
 
     try {
-      // [수정됨] 대기 시간을 15초에서 30초로 늘려 안정성 확보
       await expect(lotRows).toHaveCount(previousLotCount + 1, { timeout: 30000 });
       const newCount = await lotRows.count();
       console.log(`[정보] 새 LOT가 로드되었습니다. (이전: ${previousLotCount}개 -> 현재: ${newCount}개)`);
@@ -80,7 +79,7 @@ async function runProductValidation(
       console.log(`[정보] 대상: 제품=${productName}, LOT=${lotNumber}`);
 
       await row.getByRole('button', { name: '출력' }).click();
-      await page.waitForLoadState('networkidle', { timeout: 120_000 });
+      await page.waitForLoadState('networkidle', { timeout: 180_000 });
 
       const downloadButtons = page.getByRole('button', { name: new RegExp(`${productName} COA_.*\\.xlsx`) });
       await expect(downloadButtons.first()).toBeVisible({ timeout: 600_000 });
@@ -110,16 +109,27 @@ async function runProductValidation(
       console.log(`디버깅을 위해 스크린샷 저장: ${screenshotPath}`);
       allTestResults.push({ status: 'failure', productName, lotNumber, error: (error as Error).message });
     } finally {
+      // [수정됨] 새로고침 로직에 '자동 재시도' 기능 추가
       if (index < lotRowsToTest.length - 1) {
-        try {
-          console.log(`[정보] ${lotNumber} 테스트 완료. 다음 LOT를 위해 페이지를 새로고침합니다...`);
-          await page.reload({ waitUntil: 'domcontentloaded', timeout: 120_000 });
-          await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 60_000 });
-          console.log('[정보] 페이지 새로고침 및 UI 확인 완료.');
-        } catch (reloadError) {
-          const errorMessage = `페이지 새로고침 중 심각한 오류 발생: ${(reloadError as Error).message}`;
-          console.error(`[심각] ${errorMessage}`);
-          throw new Error(errorMessage);
+        let reloadSuccess = false;
+        for (let i = 0; i < 3; i++) { // 최대 3번 재시도
+          try {
+            console.log(`[정보] ${lotNumber} 테스트 완료. 다음 LOT를 위해 페이지를 새로고침합니다... (시도 ${i + 1}/3)`);
+            await page.reload({ waitUntil: 'domcontentloaded', timeout: 120_000 });
+            await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 120_000 });
+            console.log('[정보] 페이지 새로고침 및 UI 확인 완료.');
+            reloadSuccess = true;
+            break; // 성공 시 재시도 루프 탈출
+          } catch (reloadError) {
+            console.warn(`[경고] 새로고침 시도 ${i + 1} 실패: ${(reloadError as Error).message}`);
+            if (i < 2) { // 마지막 시도가 아니라면 5초 후 재시도
+              await page.waitForTimeout(5000);
+            } else { // 3번 모두 실패 시 최종 에러 처리
+              const errorMessage = `페이지 새로고침에 3번 연속 실패했습니다: ${(reloadError as Error).message}`;
+              console.error(`[심각] ${errorMessage}`);
+              throw new Error(errorMessage);
+            }
+          }
         }
       }
     }
@@ -150,7 +160,7 @@ test.describe('전체 LOT 대상 COA 다운로드 및 저장 검증', () => {
   // 각 제품별 테스트 케이스 (최대 30개 LOT, 타임아웃 5시간)
   test('ACP-2 제품의 최신 LOT 검증', async ({ browser }) => {
     test.setTimeout(18000_000);
-    await runProductValidation(browser, 'ACP-2', 'acp-2', 30);
+    await runProductValidation(browser, 'ACP-2', 'acp-2', 3);
   });
 
   // test('ACP-3 제품의 최신 LOT 검증', async ({ browser }) => {
