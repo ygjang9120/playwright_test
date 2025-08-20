@@ -32,14 +32,14 @@ async function runProductValidation(
   browser: Browser,
   productName: string,
   productUrlSlug: string,
-  maxLots = 3
+  maxLots = 30
 ) {
   const context = await browser.newContext({ storageState: 'storageState.json' });
   const page = await context.newPage();
 
   // 1. 제품 페이지로 이동
   await page.goto(`${baseUrl}/#/process/shipout/${productUrlSlug}`, { waitUntil: 'networkidle' });
-  await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 30_000 });
 
   // 2. 지정된 개수만큼 최상위 LOT 행을 선택
   const lotRowsAll = await page.locator('tbody > tr').all();
@@ -114,44 +114,44 @@ test.describe('전체 LOT 대상 COA 다운로드 및 저장 검증', () => {
   });
 
   // 각 제품별 테스트 케이스 (최대 3개 LOT)
-  test('ACP-2 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(3600_000); // 30분
-    await runProductValidation(browser, 'ACP-2', 'apc-2', 3);
-  });
+  // test('ACP-2 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000); // 테스트 타임아웃을 1시간으로 설정
+  //   await runProductValidation(browser, 'ACP-2', 'apc-2', 30);
+  // });
 
   // test('ACP-3 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(3600_000);
-  //   await runProductValidation(browser, 'ACP-3', 'acp-3', 3);
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'ACP-3', 'acp-3', 30);
   // });
 
   // test('TMA-F 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(3600_000);
-  //   await runProductValidation(browser, 'TMA-F', 'tma-f', 3);
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'TMA-F', 'tma-f', 30);
   // });
 
-  // test('NCE-2 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(3600_000);
-  //   await runProductValidation(browser, 'NCE-2', 'nce-2', 3);
-  // });
+  test('NCE-2 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'NCE-2', 'nce-2', 30);
+  });
 
   // test('GMP-02 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(3600_000);
-  //   await runProductValidation(browser, 'GMP-02', 'gmp-02', 3);
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'GMP-02', 'gmp-02', 30);
   // });
 
   // test('ECH 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(3600_000);
-  //   await runProductValidation(browser, 'ECH', 'ech', 3);
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'ECH', 'ech', 30);
   // });
 
   // test('ANP-1 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(3600_000);
-  //   await runProductValidation(browser, 'ANP-1', 'anp-1', 3);
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'ANP-1', 'anp-1', 30);
   // });
 
   // test('HPL-02 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(3600_000);
-  //   await runProductValidation(browser, 'HPL-02', 'hpl-02', 3);
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'HPL-02', 'hpl-02', 30);
   // });
 
 
