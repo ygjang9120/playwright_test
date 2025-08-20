@@ -37,6 +37,7 @@ async function runProductValidation(
   await page.goto(`${baseUrl}/#/process/shipout/${productUrlSlug}`, { waitUntil: 'networkidle' });
   await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 30_000 });
 
+  // 가장 안정적인 최종 스크롤 로직
   console.log(`[정보] ${productName} 제품의 LOT를 최대 ${maxLots}개까지 불러옵니다...`);
   while (true) {
     const lotRows = page.locator('tbody > tr');
@@ -47,22 +48,20 @@ async function runProductValidation(
       break;
     }
 
+    const previousLotCount = currentLotCount;
     console.log(`[${productName}] 현재 ${currentLotCount}개 LOT 발견. 더 불러오기 위해 마지막 항목으로 스크롤합니다...`);
+
     await lotRows.last().scrollIntoViewIfNeeded();
 
     try {
-      // ✅ [핵심 수정] 개수를 세는 대신, 다음 항목(currentLotCount 인덱스)이
-      // 실제로 나타날 때까지 기다리는 방식으로 변경합니다. 이것이 가장 안정적입니다.
-      await expect(lotRows.nth(currentLotCount)).toBeVisible({ timeout: 30000 });
-      
+      await expect(lotRows).toHaveCount(previousLotCount + 1, { timeout: 30000 });
       const newCount = await lotRows.count();
-      console.log(`[정보] 새 LOT가 로드되었습니다. (이전: ${currentLotCount}개 -> 현재: ${newCount}개)`);
+      console.log(`[정보] 새 LOT가 로드되었습니다. (이전: ${previousLotCount}개 -> 현재: ${newCount}개)`);
     } catch (e) {
       console.log('[정보] 대기 시간 초과. 더 이상 로드할 데이터가 없는 것으로 간주하고 스크롤을 중단합니다.');
       break;
     }
   }
-
 
   const finalLotRows = await page.locator('tbody > tr').all();
   // ▼▼▼ 이 로그를 추가하면 혼동을 줄일 수 있습니다. ▼▼▼
@@ -134,7 +133,8 @@ async function runProductValidation(
       //     }
       //   }
       // }
-       await page.reload({ waitUntil: 'networkidle' });
+      await page.reload({ waitUntil: 'networkidle' });
+    }
   }
   await page.close();
   await context.close();
