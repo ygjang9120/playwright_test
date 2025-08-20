@@ -76,10 +76,21 @@ jobs:
       - name: Notify Telegram - Failure
         if: steps.playwright_test.outcome == 'failure'
         run: |
+          # 1. summary.json 파일에서 실패한 항목만 추출하여 jq로 포맷팅합니다.
+          FAILURE_LIST=$(jq -r '.[] | select(.status=="failure") | "  - 제품: \(.productName), LOT: \(.lotNumber), 오류: \(.error)"' test-results/summary.json)
+          
+          # 2. 실패 건수를 계산합니다.
+          # grep -c . 은 비어있지 않은 라인의 수를 셉니다.
+          FAILURE_COUNT=$(echo "${FAILURE_LIST}" | grep -c .)
+          
+          # 3. 전체 실패 메시지를 구성합니다.
+          FAILURE_DETAILS="❌ COA 에러 발생 (${FAILURE_COUNT}건)\n${FAILURE_LIST}"
+          
+          # 4. 텔레그램으로 전송할 최종 메시지를 만듭니다.
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          # failure-message.txt 파일의 내용을 읽어와 메시지 구성
-          FAILURE_DETAILS=$(cat test-results/failure-message.txt)
           MSG="<b>${FAILURE_DETAILS}</b>\n\n<a href=\"${RUN_URL}\">#${{ github.run_number }} 실행 로그/리포트 확인</a>"
+          
+          # 5. curl로 메시지를 전송합니다.
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
             -d message_thread_id="${{ secrets.TELEGRAM_THREAD_ID }}" \
@@ -96,6 +107,7 @@ jobs:
             playwright-report/
             test-results/
             issue-body.md
+            downloads/ 
           retention-days: 7
 
       # [기존과 동일] 테스트 최종 상태 확인
