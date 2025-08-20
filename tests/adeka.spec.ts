@@ -37,7 +37,6 @@ async function runProductValidation(
   await page.goto(`${baseUrl}/#/process/shipout/${productUrlSlug}`, { waitUntil: 'networkidle' });
   await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 30_000 });
 
-  // 가장 안정적인 최종 스크롤 로직
   console.log(`[정보] ${productName} 제품의 LOT를 최대 ${maxLots}개까지 불러옵니다...`);
   while (true) {
     const lotRows = page.locator('tbody > tr');
@@ -48,20 +47,22 @@ async function runProductValidation(
       break;
     }
 
-    const previousLotCount = currentLotCount;
     console.log(`[${productName}] 현재 ${currentLotCount}개 LOT 발견. 더 불러오기 위해 마지막 항목으로 스크롤합니다...`);
-
     await lotRows.last().scrollIntoViewIfNeeded();
 
     try {
-      await expect(lotRows).toHaveCount(previousLotCount + 1, { timeout: 30000 });
+      // ✅ [핵심 수정] 개수를 세는 대신, 다음 항목(currentLotCount 인덱스)이
+      // 실제로 나타날 때까지 기다리는 방식으로 변경합니다. 이것이 가장 안정적입니다.
+      await expect(lotRows.nth(currentLotCount)).toBeVisible({ timeout: 30000 });
+      
       const newCount = await lotRows.count();
-      console.log(`[정보] 새 LOT가 로드되었습니다. (이전: ${previousLotCount}개 -> 현재: ${newCount}개)`);
+      console.log(`[정보] 새 LOT가 로드되었습니다. (이전: ${currentLotCount}개 -> 현재: ${newCount}개)`);
     } catch (e) {
       console.log('[정보] 대기 시간 초과. 더 이상 로드할 데이터가 없는 것으로 간주하고 스크롤을 중단합니다.');
       break;
     }
   }
+
 
   const finalLotRows = await page.locator('tbody > tr').all();
   // ▼▼▼ 이 로그를 추가하면 혼동을 줄일 수 있습니다. ▼▼▼
@@ -110,29 +111,34 @@ async function runProductValidation(
       console.log(`디버깅을 위해 스크린샷 저장: ${screenshotPath}`);
       allTestResults.push({ status: 'failure', productName, lotNumber, error: (error as Error).message });
     } finally {
-      // [수정됨] 새로고침 로직에 '자동 재시도' 기능 추가
-      if (index < lotRowsToTest.length - 1) {
-        let reloadSuccess = false;
-        for (let i = 0; i < 3; i++) { // 최대 3번 재시도
-          try {
-            console.log(`[정보] ${lotNumber} 테스트 완료. 다음 LOT를 위해 페이지를 새로고침합니다... (시도 ${i + 1}/3)`);
-            await page.reload({ waitUntil: 'domcontentloaded', timeout: 120_000 });
-            await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 120_000 });
-            console.log('[정보] 페이지 새로고침 및 UI 확인 완료.');
-            reloadSuccess = true;
-            break; // 성공 시 재시도 루프 탈출
-          } catch (reloadError) {
-            console.warn(`[경고] 새로고침 시도 ${i + 1} 실패: ${(reloadError as Error).message}`);
-            if (i < 2) { // 마지막 시도가 아니라면 5초 후 재시도
-              await page.waitForTimeout(5000);
-            } else { // 3번 모두 실패 시 최종 에러 처리
-              const errorMessage = `페이지 새로고침에 3번 연속 실패했습니다: ${(reloadError as Error).message}`;
-              console.error(`[심각] ${errorMessage}`);
-              throw new Error(errorMessage);
-            }
-          }
-        }
-      }
+      // // [수정됨] 새로고침 로직에 '자동 재시도' 기능 추가
+      // if (index < lotRowsToTest.length - 1) {
+      //   let reloadSuccess = false;
+      //   for (let i = 0; i < 3; i++) { // 최대 3번 재시도
+      //     try {
+      //       console.log(`[정보] ${lotNumber} 테스트 완료. 다음 LOT를 위해 페이지를 새로고침합니다... (시도 ${i + 1}/3)`);
+      //       await page.reload({ waitUntil: 'domcontentloaded', timeout: 120_000 });
+      //       await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 120_000 });
+      //       console.log('[정보] 페이지 새로고침 및 UI 확인 완료.');
+      //       reloadSuccess = true;
+      //       break; // 성공 시 재시도 루프 탈출
+      //     } catch (reloadError) {
+      //       console.warn(`[경고] 새로고침 시도 ${i + 1} 실패: ${(reloadError as Error).message}`);
+      //       if (i < 2) { // 마지막 시도가 아니라면 5초 후 재시도
+      //         await page.waitForTimeout(5000);
+      //       } else { // 3번 모두 실패 시 최종 에러 처리
+      //         const errorMessage = `페이지 새로고침에 3번 연속 실패했습니다: ${(reloadError as Error).message}`;
+      //         console.error(`[심각] ${errorMessage}`);
+      //         throw new Error(errorMessage);
+      //       }
+      //     }
+      //   }
+      // }
+       await page.locator('div.sc-JrDLc.eorIHt').getByRole('button').click();
+  
+  // 팝업이 닫히고 다시 원래 목록이 보일 때까지 안정적으로 기다립니다.
+  await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 60_000 });
+  console.log('[정보] 팝업 닫기 및 목록 UI 확인 완료.');
     }
   }
   await page.close();
