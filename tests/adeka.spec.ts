@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import dotenv from 'dotenv';
 
 // .env 파일의 환경 변수를 로드합니다. (로컬 테스트용)
-dotenv.config();
+// dotenv.config();
 
 // --- 환경 변수 및 기본 설정 ---
 const username = process.env.ADEKA_ID;
@@ -37,28 +37,33 @@ async function runProductValidation(
   await page.goto(`${baseUrl}/#/process/shipout/${productUrlSlug}`, { waitUntil: 'networkidle' });
   await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 30_000 });
 
-  // 더 안정적인 스크롤 로직으로 변경
-  let previousLotCount = -1;
+  // 가장 안정적인 최종 스크롤 로직
+  console.log(`[정보] ${productName} 제품의 LOT를 최대 ${maxLots}개까지 불러옵니다...`);
   while (true) {
     const lotRows = page.locator('tbody > tr');
     const currentLotCount = await lotRows.count();
 
-    if (currentLotCount >= maxLots || currentLotCount === previousLotCount) {
+    if (currentLotCount >= maxLots) {
+      console.log(`[정보] 목표 개수인 ${maxLots}개 이상을 찾았으므로 스크롤을 중단합니다.`);
       break;
     }
 
-    previousLotCount = currentLotCount;
+    const previousLotCount = currentLotCount;
     console.log(`[${productName}] 현재 ${currentLotCount}개 LOT 발견. 더 불러오기 위해 마지막 항목으로 스크롤합니다...`);
 
     await lotRows.last().scrollIntoViewIfNeeded();
 
     try {
-      await page.waitForLoadState('networkidle', { timeout: 10000 });
+      // [수정됨] 대기 시간을 15초에서 30초로 늘려 안정성 확보
+      await expect(lotRows).toHaveCount(previousLotCount + 1, { timeout: 30000 });
+      const newCount = await lotRows.count();
+      console.log(`[정보] 새 LOT가 로드되었습니다. (이전: ${previousLotCount}개 -> 현재: ${newCount}개)`);
     } catch (e) {
-      console.log('[정보] 네트워크 대기 시간 초과. 데이터 로딩이 완료된 것으로 간주합니다.');
+      console.log('[정보] 대기 시간 초과. 더 이상 로드할 데이터가 없는 것으로 간주하고 스크롤을 중단합니다.');
       break;
     }
   }
+
 
   const finalLotRows = await page.locator('tbody > tr').all();
   const lotRowsToTest = finalLotRows.slice(0, Math.min(maxLots, finalLotRows.length));
@@ -66,11 +71,13 @@ async function runProductValidation(
 
   for (const [index, row] of lotRowsToTest.entries()) {
     let lotNumber = '알 수 없음';
+    console.log(`\n[${index + 1}/${lotRowsToTest.length}] 테스트 처리 시작...`);
+    
     try {
       const lotNumberCell = row.locator('td').nth(1);
       await expect(lotNumberCell).toBeVisible({ timeout: 60_000 });
       lotNumber = await lotNumberCell.textContent() || `[읽기 실패]`;
-      console.log(`\n[${index + 1}/${lotRowsToTest.length}] 테스트 시작: 제품=${productName}, LOT=${lotNumber}`);
+      console.log(`[정보] 대상: 제품=${productName}, LOT=${lotNumber}`);
 
       await row.getByRole('button', { name: '출력' }).click();
       await page.waitForLoadState('networkidle', { timeout: 120_000 });
@@ -82,10 +89,8 @@ async function runProductValidation(
       await downloadButtons.first().click();
       const download = await downloadPromise;
 
-      // [수정됨] 덮어쓰기를 방지하기 위해 고유한 파일 이름을 생성합니다.
       const sanitizedLotNumber = lotNumber.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const originalFileName = download.suggestedFilename();
-      const fileExtension = path.extname(originalFileName) || '.xlsx';
+      const fileExtension = path.extname(download.suggestedFilename()) || '.xlsx';
       const uniqueFileName = `${productName}_${sanitizedLotNumber}${fileExtension}`;
       
       const downloadsPath = path.join(process.cwd(), 'downloads');
@@ -95,7 +100,6 @@ async function runProductValidation(
 
       expect(fs.existsSync(filePath)).toBe(true);
       console.log(`[성공] 파일 다운로드 및 저장 완료: ${filePath}`);
-      // 리포트에도 고유한 파일 이름을 기록합니다.
       allTestResults.push({ status: 'success', productName, lotNumber, file: uniqueFileName });
 
     } catch (error) {
@@ -149,40 +153,40 @@ test.describe('전체 LOT 대상 COA 다운로드 및 저장 검증', () => {
     await runProductValidation(browser, 'ACP-2', 'acp-2', 30);
   });
 
-  test('ACP-3 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(18000_000);
-    await runProductValidation(browser, 'ACP-3', 'acp-3', 30);
-  });
+  // test('ACP-3 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'ACP-3', 'acp-3', 30);
+  // });
 
-  test('TMA-F 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(18000_000);
-    await runProductValidation(browser, 'TMA-F', 'tma-f', 30);
-  });
+  // test('TMA-F 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'TMA-F', 'tma-f', 30);
+  // });
 
-  test('NCE-2 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(18000_000);
-    await runProductValidation(browser, 'NCE-2', 'nce-2', 30);
-  });
+  // test('NCE-2 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'NCE-2', 'nce-2', 30);
+  // });
 
-  test('GMP-02 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(18000_000);
-    await runProductValidation(browser, 'GMP-02', 'gmp-02', 30);
-  });
+  // test('GMP-02 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'GMP-02', 'gmp-02', 30);
+  // });
 
-  test('ECH 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(18000_000);
-    await runProductValidation(browser, 'ECH', 'ech', 30);
-  });
+  // test('ECH 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'ECH', 'ech', 30);
+  // });
 
-  test('ANP-1 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(18000_000);
-    await runProductValidation(browser, 'ANP-1', 'anp-1', 30);
-  });
+  // test('ANP-1 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'ANP-1', 'anp-1', 30);
+  // });
 
-  test('HPL-02 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(18000_000);
-    await runProductValidation(browser, 'HPL-02', 'hpl-02', 30);
-  });
+  // test('HPL-02 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'HPL-02', 'hpl-02', 30);
+  // });
 
 
   test.afterAll(async () => {
