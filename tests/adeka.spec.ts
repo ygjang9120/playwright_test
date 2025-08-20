@@ -134,12 +134,7 @@ async function runProductValidation(
       //     }
       //   }
       // }
-       await page.locator('div.sc-JrDLc.eorIHt').getByRole('button').click();
-  
-  // 팝업이 닫히고 다시 원래 목록이 보일 때까지 안정적으로 기다립니다.
-  await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 60_000 });
-  console.log('[정보] 팝업 닫기 및 목록 UI 확인 완료.');
-    }
+       await page.reload({ waitUntil: 'networkidle' });
   }
   await page.close();
   await context.close();
