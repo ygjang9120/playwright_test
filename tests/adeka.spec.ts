@@ -37,32 +37,42 @@ async function runProductValidation(
   await page.goto(`${baseUrl}/#/process/shipout/${productUrlSlug}`, { waitUntil: 'networkidle' });
   await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 30_000 });
 
-  // 동적 스크롤링으로 데이터 로드
-  let currentLotCount = 0;
+  // [수정됨] 더 안정적인 스크롤 로직으로 변경
   let previousLotCount = -1;
   while (true) {
-    const lotRowsAll = await page.locator('tbody > tr').all();
-    currentLotCount = lotRowsAll.length;
+    const lotRows = page.locator('tbody > tr');
+    const currentLotCount = await lotRows.count();
+
     if (currentLotCount >= maxLots || currentLotCount === previousLotCount) {
       break;
     }
+
     previousLotCount = currentLotCount;
-    console.log(`[${productName}] 현재 ${currentLotCount}개 LOT 발견. 더 불러오기 위해 스크롤합니다...`);
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(3000);
+    console.log(`[${productName}] 현재 ${currentLotCount}개 LOT 발견. 더 불러오기 위해 마지막 항목으로 스크롤합니다...`);
+
+    // 현재 리스트의 마지막 항목이 화면에 보이도록 스크롤합니다.
+    await lotRows.last().scrollIntoViewIfNeeded();
+
+    // 새 데이터가 로드되고 네트워크 활동이 안정될 때까지 기다립니다.
+    try {
+      await page.waitForLoadState('networkidle', { timeout: 10000 }); // 10초 대기
+    } catch (e) {
+      console.log('[정보] 네트워크 대기 시간 초과. 데이터 로딩이 완료된 것으로 간주합니다.');
+      break; // 타임아웃 발생 시, 더 이상 로드할 데이터가 없는 것으로 판단하고 중단
+    }
   }
 
-  const lotRowsAll = await page.locator('tbody > tr').all();
-  const lotRows = lotRowsAll.slice(0, Math.min(maxLots, lotRowsAll.length));
-  console.log(`\n[${productName}] 총 ${lotRows.length}개의 LOT를 대상으로 다운로드 테스트를 시작합니다.`);
+  const finalLotRows = await page.locator('tbody > tr').all();
+  const lotRowsToTest = finalLotRows.slice(0, Math.min(maxLots, finalLotRows.length));
+  console.log(`\n[${productName}] 총 ${lotRowsToTest.length}개의 LOT를 대상으로 다운로드 테스트를 시작합니다.`);
 
-  for (const [index, row] of lotRows.entries()) {
+  for (const [index, row] of lotRowsToTest.entries()) {
     let lotNumber = '알 수 없음';
     try {
       const lotNumberCell = row.locator('td').nth(1);
       await expect(lotNumberCell).toBeVisible({ timeout: 60_000 });
       lotNumber = await lotNumberCell.textContent() || `[읽기 실패]`;
-      console.log(`\n[${index + 1}/${lotRows.length}] 테스트 시작: 제품=${productName}, LOT=${lotNumber}`);
+      console.log(`\n[${index + 1}/${lotRowsToTest.length}] 테스트 시작: 제품=${productName}, LOT=${lotNumber}`);
 
       await row.getByRole('button', { name: '출력' }).click();
       await page.waitForLoadState('networkidle', { timeout: 120_000 });
@@ -91,20 +101,15 @@ async function runProductValidation(
       console.log(`디버깅을 위해 스크린샷 저장: ${screenshotPath}`);
       allTestResults.push({ status: 'failure', productName, lotNumber, error: (error as Error).message });
     } finally {
-      // [수정됨] 마지막 항목이 아닐 때만 새로고침을 실행합니다.
-      if (index < lotRows.length - 1) {
+      if (index < lotRowsToTest.length - 1) {
         try {
           console.log(`[정보] ${lotNumber} 테스트 완료. 다음 LOT를 위해 페이지를 새로고침합니다...`);
-          // 'networkidle' 대신 'domcontentloaded'를 사용하고, 작업 자체에 타임아웃을 설정합니다.
-          await page.reload({ waitUntil: 'domcontentloaded', timeout: 120_000 }); // 2분 타임아웃
-          
-          // 새로고침 후, 테이블의 첫 번째 행이 다시 나타날 때까지 기다려 페이지 로딩을 보장합니다.
+          await page.reload({ waitUntil: 'domcontentloaded', timeout: 120_000 });
           await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 60_000 });
           console.log('[정보] 페이지 새로고침 및 UI 확인 완료.');
         } catch (reloadError) {
           const errorMessage = `페이지 새로고침 중 심각한 오류 발생: ${(reloadError as Error).message}`;
           console.error(`[심각] ${errorMessage}`);
-          // 새로고침이 실패하면 더 이상 진행이 무의미하므로, 현재 제품의 남은 테스트를 중단합니다.
           throw new Error(errorMessage);
         }
       }
@@ -136,7 +141,7 @@ test.describe('전체 LOT 대상 COA 다운로드 및 저장 검증', () => {
   // 각 제품별 테스트 케이스 (최대 30개 LOT, 타임아웃 5시간)
   test('ACP-2 제품의 최신 LOT 검증', async ({ browser }) => {
     test.setTimeout(18000_000);
-    await runProductValidation(browser, 'ACP-2', 'acp-2', 30); // 'apc-2' 오타 수정
+    await runProductValidation(browser, 'ACP-2', 'acp-2', 30);
   });
 
   test('ACP-3 제품의 최신 LOT 검증', async ({ browser }) => {
