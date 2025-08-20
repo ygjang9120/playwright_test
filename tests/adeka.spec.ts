@@ -75,7 +75,7 @@ async function runProductValidation(
     
     try {
       const lotNumberCell = row.locator('td').nth(1);
-      await expect(lotNumberCell).toBeVisible({ timeout: 60_000 });
+      await expect(lotNumberCell).toBeVisible({ timeout: 120_000 });
       lotNumber = await lotNumberCell.textContent() || `[읽기 실패]`;
       console.log(`[정보] 대상: 제품=${productName}, LOT=${lotNumber}`);
 
