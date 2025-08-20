@@ -160,7 +160,7 @@ test.describe('전체 LOT 대상 COA 다운로드 및 저장 검증', () => {
   // 각 제품별 테스트 케이스 (최대 30개 LOT, 타임아웃 5시간)
   test('ACP-2 제품의 최신 LOT 검증', async ({ browser }) => {
     test.setTimeout(18000_000);
-    await runProductValidation(browser, 'ACP-2', 'acp-2', 3);
+    await runProductValidation(browser, 'ACP-2', 'acp-2', 30);
   });
 
   // test('ACP-3 제품의 최신 LOT 검증', async ({ browser }) => {
