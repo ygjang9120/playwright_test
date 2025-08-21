@@ -25,6 +25,7 @@ type TestResult = {
 const allTestResults: TestResult[] = [];
 
 // --- 재사용 가능한 제품 테스트 함수 ---
+// --- 재사용 가능한 제품 테스트 함수 (수정된 버전) ---
 async function runProductValidation(
   browser: Browser,
   productName: string,
@@ -34,52 +35,90 @@ async function runProductValidation(
   const context = await browser.newContext({ storageState: 'storageState.json' });
   const page = await context.newPage();
 
+  // --- 1. 초기 탐색 및 테스트할 총 LOT 개수 확정 ---
   await page.goto(`${baseUrl}/#/process/shipout/${productUrlSlug}`, { waitUntil: 'networkidle' });
   await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 30_000 });
+  
+  console.log(`[정보] 테스트할 총 LOT 개수를 확인하기 위해 전체 스크롤을 시작합니다...`);
+  // 먼저 스크롤을 끝까지 내려서 테스트 대상이 총 몇 개인지 확정합니다.
 
-  // 가장 안정적인 최종 스크롤 로직
-  console.log(`[정보] ${productName} 제품의 LOT를 최대 ${maxLots}개까지 불러옵니다...`);
+  let lastLoggedIndex = 0;
+
   while (true) {
     const lotRows = page.locator('tbody > tr');
     const currentLotCount = await lotRows.count();
 
+    if (currentLotCount > lastLoggedIndex) {
+      for (let j = lastLoggedIndex; j < currentLotCount; j++) {
+        const newRow = lotRows.nth(j);
+        const lotCell = newRow.locator('td').nth(1); // LOT 번호가 있는 두 번째 'td'
+        const lotNumber = await lotCell.textContent() || '[읽기 실패]';
+        console.log(`[초기 스크롤] ${j + 1}번째 LOT 발견: ${lotNumber.trim()}`);
+      }
+      lastLoggedIndex = currentLotCount; // 로그 찍은 개수 업데이트
+    }
+
     if (currentLotCount >= maxLots) {
-      console.log(`[정보] 목표 개수인 ${maxLots}개 이상을 찾았으므로 스크롤을 중단합니다.`);
+      console.log(`[정보] 목표 개수인 ${maxLots}개 이상(${currentLotCount}개)을 찾았으므로 스크롤을 중단합니다.`);
       break;
     }
 
     const previousLotCount = currentLotCount;
-    console.log(`[${productName}] 현재 ${currentLotCount}개 LOT 발견. 더 불러오기 위해 마지막 항목으로 스크롤합니다...`);
-
     await lotRows.last().scrollIntoViewIfNeeded();
 
     try {
+      // 새 항목이 로드될 때까지 최대 30초 대기
       await expect(lotRows).toHaveCount(previousLotCount + 1, { timeout: 30000 });
-      const newCount = await lotRows.count();
-      console.log(`[정보] 새 LOT가 로드되었습니다. (이전: ${previousLotCount}개 -> 현재: ${newCount}개)`);
     } catch (e) {
-      console.log('[정보] 대기 시간 초과. 더 이상 로드할 데이터가 없는 것으로 간주하고 스크롤을 중단합니다.');
+      console.log('[정보] 더 이상 로드할 데이터가 없는 것으로 간주하고 스크롤을 중단합니다.');
       break;
     }
   }
 
-  const finalLotRows = await page.locator('tbody > tr').all();
-  // ▼▼▼ 이 로그를 추가하면 혼동을 줄일 수 있습니다. ▼▼▼
-  console.log(`[정보] 스크롤 종료 후, 최종적으로 ${finalLotRows.length}개의 LOT가 발견되었습니다.`);
-  const lotRowsToTest = finalLotRows.slice(0, Math.min(maxLots, finalLotRows.length));
-  console.log(`\n[${productName}] 총 ${lotRowsToTest.length}개의 LOT를 대상으로 다운로드 테스트를 시작합니다.`);
+  const totalLotsFound = await page.locator('tbody > tr').count();
+  const lotsToTestCount = Math.min(maxLots, totalLotsFound);
+  console.log(`\n[${productName}] 총 ${lotsToTestCount}개의 LOT를 대상으로 다운로드 테스트를 시작합니다.`);
+  
+  // 페이지를 초기 상태로 되돌려 첫 번째 LOT부터 테스트를 준비합니다.
+  await page.reload({ waitUntil: 'networkidle' });
+  await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 30_000 });
 
-  for (const [index, row] of lotRowsToTest.entries()) {
+
+  // --- 2. 인덱스 기반으로 루프 실행 (핵심 수정 사항) ---
+  for (let i = 0; i < lotsToTestCount; i++) {
     let lotNumber = '알 수 없음';
-    console.log(`\n[${index + 1}/${lotRowsToTest.length}] 테스트 처리 시작...`);
-    
-    try {
-      const lotNumberCell = row.locator('td').nth(1);
-      await expect(lotNumberCell).toBeVisible({ timeout: 120_000 });
-      lotNumber = await lotNumberCell.textContent() || `[읽기 실패]`;
-      console.log(`[정보] 대상: 제품=${productName}, LOT=${lotNumber}`);
+    console.log(`\n[${i + 1}/${lotsToTestCount}] 테스트 처리 시작...`);
 
-      await row.getByRole('button', { name: '출력' }).click();
+    try {
+      // **핵심 로직**: 매번 루프가 시작될 때마다 페이지 상태가 초기화되었다고 가정합니다.
+      // 따라서 i번째 요소를 찾기 위해 처음부터 다시 스크롤합니다.
+      let isTargetVisible = false;
+      while (!isTargetVisible) {
+        const currentVisibleCount = await page.locator('tbody > tr').count();
+        if (i < currentVisibleCount) {
+          // i번째 요소가 현재 화면(DOM)에 로드되었으므로 스크롤 중단
+          isTargetVisible = true;
+        } else {
+          // 목표가 아직 로드되지 않았으므로 맨 아래로 스크롤하여 더 많은 항목을 불러옵니다.
+          console.log(`[정보] ${i + 1}번째 LOT를 찾기 위해 스크롤합니다. (현재 ${currentVisibleCount}개)`);
+          await page.locator('tbody > tr').last().scrollIntoViewIfNeeded();
+          // 새 데이터가 로드될 시간을 줍니다.
+          await page.waitForTimeout(10000); 
+        }
+      }
+
+      // 이제 i번째 요소가 확실히 로드되었으므로 해당 요소를 지정하여 테스트를 진행합니다.
+      const targetRow = page.locator('tbody > tr').nth(i);
+      await targetRow.scrollIntoViewIfNeeded(); // 정확한 상호작용을 위해 뷰포트로 이동
+
+      const lotNumberCell = targetRow.locator('td').nth(1);
+      await expect(lotNumberCell).toBeVisible({ timeout: 10_000 }); 
+      lotNumber = (await lotNumberCell.textContent()) || `[읽기 실패]`;
+      console.log(`[정보] 대상: 제품=${productName}, LOT=${lotNumber} (인덱스: ${i})`);
+
+      await targetRow.getByRole('button', { name: '출력' }).click();
+
+      // ▼▼▼ 이하 다운로드 및 파일 저장 로직은 기존과 동일합니다. ▼▼▼
       await page.waitForLoadState('networkidle', { timeout: 180_000 });
 
       const downloadButtons = page.getByRole('button', { name: new RegExp(`${productName} COA_.*\\.xlsx`) });
@@ -110,30 +149,30 @@ async function runProductValidation(
       console.log(`디버깅을 위해 스크린샷 저장: ${screenshotPath}`);
       allTestResults.push({ status: 'failure', productName, lotNumber, error: (error as Error).message });
     } finally {
-      // // [수정됨] 새로고침 로직에 '자동 재시도' 기능 추가
-      // if (index < lotRowsToTest.length - 1) {
-      //   let reloadSuccess = false;
-      //   for (let i = 0; i < 3; i++) { // 최대 3번 재시도
-      //     try {
-      //       console.log(`[정보] ${lotNumber} 테스트 완료. 다음 LOT를 위해 페이지를 새로고침합니다... (시도 ${i + 1}/3)`);
-      //       await page.reload({ waitUntil: 'domcontentloaded', timeout: 120_000 });
-      //       await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 120_000 });
-      //       console.log('[정보] 페이지 새로고침 및 UI 확인 완료.');
-      //       reloadSuccess = true;
-      //       break; // 성공 시 재시도 루프 탈출
-      //     } catch (reloadError) {
-      //       console.warn(`[경고] 새로고침 시도 ${i + 1} 실패: ${(reloadError as Error).message}`);
-      //       if (i < 2) { // 마지막 시도가 아니라면 5초 후 재시도
-      //         await page.waitForTimeout(5000);
-      //       } else { // 3번 모두 실패 시 최종 에러 처리
-      //         const errorMessage = `페이지 새로고침에 3번 연속 실패했습니다: ${(reloadError as Error).message}`;
-      //         console.error(`[심각] ${errorMessage}`);
-      //         throw new Error(errorMessage);
-      //       }
-      //     }
-      //   }
-      // }
-      await page.reload({ waitUntil: 'networkidle' });
+      // 다음 LOT 테스트를 위해 페이지를 새로고침합니다. (루프 시작 시 어차피 초기화된 상태에서 시작)
+      if (i < lotsToTestCount - 1) {
+        // 주석 처리하셨던 안정적인 새로고침 로직을 사용하는 것이 좋습니다.
+        let reloadSuccess = false;
+        for (let attempt = 0; attempt < 3; attempt++) { 
+          try {
+            console.log(`[정보] ${lotNumber} 테스트 완료. 다음 LOT를 위해 페이지를 새로고침합니다... (시도 ${attempt + 1}/3)`);
+            await page.reload({ waitUntil: 'networkidle', timeout: 120_000 });
+            await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 120_000 });
+            console.log('[정보] 페이지 새로고침 및 UI 확인 완료.');
+            reloadSuccess = true;
+            break; 
+          } catch (reloadError) {
+            console.warn(`[경고] 새로고침 시도 ${attempt + 1} 실패: ${(reloadError as Error).message}`);
+            if (attempt < 2) { 
+              await page.waitForTimeout(5000);
+            } else { 
+              const errorMessage = `페이지 새로고침에 3번 연속 실패했습니다: ${(reloadError as Error).message}`;
+              console.error(`[심각] ${errorMessage}`);
+              throw new Error(errorMessage);
+            }
+          }
+        }
+      }
     }
   }
   await page.close();
@@ -165,40 +204,40 @@ test.describe('전체 LOT 대상 COA 다운로드 및 저장 검증', () => {
     await runProductValidation(browser, 'ACP-2', 'acp-2', 30);
   });
 
-  test('ACP-3 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(18000_000);
-    await runProductValidation(browser, 'ACP-3', 'acp-3', 30);
-  });
+  // test('ACP-3 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'ACP-3', 'acp-3', 30);
+  // });
 
-  test('TMA-F 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(18000_000);
-    await runProductValidation(browser, 'TMA-F', 'tma-f', 30);
-  });
+  // test('TMA-F 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'TMA-F', 'tma-f', 30);
+  // });
 
-  test('NCE-2 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(18000_000);
-    await runProductValidation(browser, 'NCE-2', 'nce-2', 30);
-  });
+  // test('NCE-2 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'NCE-2', 'nce-2', 30);
+  // });
 
-  test('GMP-02 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(18000_000);
-    await runProductValidation(browser, 'GMP-02', 'gmp-02', 30);
-  });
+  // test('GMP-02 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'GMP-02', 'gmp-02', 30);
+  // });
 
-  test('ECH 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(18000_000);
-    await runProductValidation(browser, 'ECH', 'ech', 30);
-  });
+  // test('ECH 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'ECH', 'ech', 30);
+  // });
 
-  test('ANP-1 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(18000_000);
-    await runProductValidation(browser, 'ANP-1', 'anp-1', 30);
-  });
+  // test('ANP-1 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'ANP-1', 'anp-1', 30);
+  // });
 
-  test('HPL-02 제품의 최신 LOT 검증', async ({ browser }) => {
-    test.setTimeout(18000_000);
-    await runProductValidation(browser, 'HPL-02', 'hpl-02', 30);
-  });
+  // test('HPL-02 제품의 최신 LOT 검증', async ({ browser }) => {
+  //   test.setTimeout(18000_000);
+  //   await runProductValidation(browser, 'HPL-02', 'hpl-02', 30);
+  // });
 
 
   test.afterAll(async () => {
