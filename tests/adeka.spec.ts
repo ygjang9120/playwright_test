@@ -42,7 +42,7 @@ await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 30_000 }
 console.log(`[정보] 마지막 행까지 스크롤하며 LOT를 더 로드합니다...`);
 const rows = page.locator('tbody > tr');
 await rows.first().hover();
-await page.mouse.wheel(0, 300);
+await page.mouse.wheel(0, 350);
 let prevCount = 0;
 let stagnant = 0;
 
@@ -81,7 +81,7 @@ while (true) {
   // 핵심: 마지막 행을 화면에 보이게 하여 내부 스크롤 컨테이너를 움직입니다.
   // await rows.last().scrollIntoViewIfNeeded();
   //  await rows.first().hover();
-  // await page.mouse.wheel(0, 300);
+  // await page.mouse.wheel(0, 350);
   await page.waitForTimeout(800);
 }
 
@@ -110,7 +110,7 @@ console.log(`\n[${productName}] 총 ${lotsToTestCount}개의 LOT를 대상으로
           console.log(`[정보] ${i + 1}번째 LOT를 찾기 위해 스크롤합니다. (현재 ${currentVisibleCount}개)`);
           // ✨ 여기도 마찬가지로 '마우스 휠' 스크롤을 사용합니다.
           await rows.first().hover();
-          await page.mouse.wheel(0, 300);
+          await page.mouse.wheel(0, 350);
           await page.waitForTimeout(3000);
           scrollAttempts++;
         }
@@ -162,7 +162,7 @@ console.log(`\n[${productName}] 총 ${lotsToTestCount}개의 LOT를 대상으로
             await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 120_000 });
             const rows = page.locator('tbody > tr');
             await rows.first().hover();
-            await page.mouse.wheel(0, 300);
+            await page.mouse.wheel(0, 350);
             console.log('[정보] 페이지 새로고침 및 UI 확인 완료.');
             reloadSuccess = true;
             break;
