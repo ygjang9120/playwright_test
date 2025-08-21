@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 
 // adeka.spec.ts
 
-// ▼▼▼ 이 함수 전체를 교체하세요 ▼▼▼
+// 텔레그램 전송함수
 async function sendTelegramMessage(message: string) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -98,6 +98,17 @@ async function runProductValidation(
       if (count > prevCount) {
         console.log(`[정보] 현재 LOT ${count}개 발견.`);
         // (LOT 번호 출력은 생략하여 로그를 간결하게 유지)
+        for (let j = prevCount; j < count; j++) {
+          const newRow = rows.nth(j);
+          const lotCell = newRow.locator('td').nth(1);
+          try {
+            await expect(lotCell).toBeVisible({ timeout: 5000 });
+            const lotNumber = await lotCell.textContent() || '[읽기 실패]';
+            console.log(`  - ${j + 1}번째 LOT: ${lotNumber.trim()}`);
+          } catch (error) {
+            console.log(`  - ${j + 1}번째 행의 LOT 번호를 읽는 데 실패했습니다.`);
+          }
+        }
         stagnant = 0;
         prevCount = count;
       } else {
@@ -246,12 +257,12 @@ test.describe('전체 LOT 대상 COA 다운로드 및 저장 검증', () => {
   // 각 제품별 테스트 케이스 (최대 30개 LOT, 타임아웃 5시간)
   test('ACP-2 제품의 최신 LOT 검증', async ({ browser }) => {
     test.setTimeout(18000_000);
-    await runProductValidation(browser, 'ACP-2', 'acp-2', 2);
+    await runProductValidation(browser, 'ACP-2', 'acp-2', 30);
   });
 
   test('ACP-3 제품의 최신 LOT 검증', async ({ browser }) => {
     test.setTimeout(18000_000);
-    await runProductValidation(browser, 'ACP-3', 'acp-3', 2);
+    await runProductValidation(browser, 'ACP-3', 'acp-3', 30);
   });
 
   // test('TMA-F 제품의 최신 LOT 검증', async ({ browser }) => {
