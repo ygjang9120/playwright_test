@@ -265,35 +265,35 @@ test.describe('전체 LOT 대상 COA 다운로드 및 저장 검증', () => {
     await runProductValidation(browser, 'ACP-3', 'acp-3', 30);
   });
 
-  // test('TMA-F 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(18000_000);
-  //   await runProductValidation(browser, 'TMA-F', 'tma-f', 30);
-  // });
+  test('TMA-F 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'TMA-F', 'tma-f', 30);
+  });
 
-  // test('NCE-2 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(18000_000);
-  //   await runProductValidation(browser, 'NCE-2', 'nce-2', 30);
-  // });
+  test('NCE-2 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'NCE-2', 'nce-2', 30);
+  });
 
-  // test('GMP-02 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(18000_000);
-  //   await runProductValidation(browser, 'GMP-02', 'gmp-02', 30);
-  // });
+  test('GMP-02 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'GMP-02', 'gmp-02', 30);
+  });
 
-  // test('ECH 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(18000_000);
-  //   await runProductValidation(browser, 'ECH', 'ech', 30);
-  // });
+  test('ECH 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'ECH', 'ech', 30);
+  });
 
-  // test('ANP-1 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(18000_000);
-  //   await runProductValidation(browser, 'ANP-1', 'anp-1', 30);
-  // });
+  test('ANP-1 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'ANP-1', 'anp-1', 30);
+  });
 
-  // test('HPL-02 제품의 최신 LOT 검증', async ({ browser }) => {
-  //   test.setTimeout(18000_000);
-  //   await runProductValidation(browser, 'HPL-02', 'hpl-02', 30);
-  // });
+  test('HPL-02 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'HPL-02', 'hpl-02', 30);
+  });
 
 
   test.afterAll(async () => {
