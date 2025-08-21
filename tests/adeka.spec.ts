@@ -109,7 +109,8 @@ console.log(`\n[${productName}] 총 ${lotsToTestCount}개의 LOT를 대상으로
         } else {
           console.log(`[정보] ${i + 1}번째 LOT를 찾기 위해 스크롤합니다. (현재 ${currentVisibleCount}개)`);
           // ✨ 여기도 마찬가지로 '마우스 휠' 스크롤을 사용합니다.
-          await page.mouse.wheel(0, 500);
+          await rows.first().hover();
+          await page.mouse.wheel(0, 300);
           await page.waitForTimeout(3000);
           scrollAttempts++;
         }
