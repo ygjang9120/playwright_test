@@ -25,7 +25,7 @@ type TestResult = {
 const allTestResults: TestResult[] = [];
 
 // --- 재사용 가능한 제품 테스트 함수 ---
-// --- 재사용 가능한 제품 테스트 함수 (수정된 버전) ---
+// --- 최종 완성본 ---
 async function runProductValidation(
   browser: Browser,
   productName: string,
@@ -35,108 +35,110 @@ async function runProductValidation(
   const context = await browser.newContext({ storageState: 'storageState.json' });
   const page = await context.newPage();
 
-  // --- 1. 초기 탐색 및 테스트할 총 LOT 개수 확정 ---
-  await page.goto(`${baseUrl}/#/process/shipout/${productUrlSlug}`, { waitUntil: 'networkidle' });
-  await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 30_000 });
-  
-  console.log(`[정보] 테스트할 총 LOT 개수를 확인하기 위해 전체 스크롤을 시작합니다...`);
-  // 먼저 스크롤을 끝까지 내려서 테스트 대상이 총 몇 개인지 확정합니다.
+  // --- 1. 초기 탐색: '마우스 휠'로 스크롤하여 테스트할 총 LOT 개수 확정 ---
+await page.goto(`${baseUrl}/#/process/shipout/${productUrlSlug}`, { waitUntil: 'networkidle' });
+await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 30_000 });
 
-  let lastLoggedIndex = 0;
+console.log(`[정보] 마지막 행까지 스크롤하며 LOT를 더 로드합니다...`);
+const rows = page.locator('tbody > tr');
+await rows.first().hover();
+await page.mouse.wheel(0, 300);
+let prevCount = 0;
+let stagnant = 0;
 
-  while (true) {
-    const lotRows = page.locator('tbody > tr');
-    const currentLotCount = await lotRows.count();
+while (true) {
+  const count = await rows.count();
+  if (count > prevCount) {
+    console.log(`[정보] 현재 LOT ${count}개 발견.`);
 
-    if (currentLotCount > lastLoggedIndex) {
-      for (let j = lastLoggedIndex; j < currentLotCount; j++) {
-        const newRow = lotRows.nth(j);
-        const lotCell = newRow.locator('td').nth(1); // LOT 번호가 있는 두 번째 'td'
-        const lotNumber = await lotCell.textContent() || '[읽기 실패]';
-        console.log(`[초기 스크롤] ${j + 1}번째 LOT 발견: ${lotNumber.trim()}`);
-      }
-      lastLoggedIndex = currentLotCount; // 로그 찍은 개수 업데이트
-    }
-
-    if (currentLotCount >= maxLots) {
-      console.log(`[정보] 목표 개수인 ${maxLots}개 이상(${currentLotCount}개)을 찾았으므로 스크롤을 중단합니다.`);
-      break;
-    }
-
-    const previousLotCount = currentLotCount;
-    await lotRows.last().scrollIntoViewIfNeeded();
-
-    try {
-      // 새 항목이 로드될 때까지 최대 30초 대기
-      await expect(lotRows).toHaveCount(previousLotCount + 1, { timeout: 30000 });
-    } catch (e) {
-      console.log('[정보] 더 이상 로드할 데이터가 없는 것으로 간주하고 스크롤을 중단합니다.');
-      break;
-    }
+    for (let j = prevCount; j < count; j++) {
+        const newRow = rows.nth(j);
+        const lotCell = newRow.locator('td').nth(1);
+        try {
+          // 안정성을 위해 셀이 보일 때까지 기다립니다.
+          await expect(lotCell).toBeVisible({ timeout: 5000 });
+          const lotNumber = await lotCell.textContent() || '[읽기 실패]';
+          console.log(`  - ${j + 1}번째 LOT: ${lotNumber.trim()}`);
+        } catch (error) {
+          console.log(`  - ${j + 1}번째 행의 LOT 번호를 읽는 데 실패했습니다.`);
+        }
+      }
+    stagnant = 0;
+    prevCount = count;
+  } else {
+    stagnant++;
   }
 
-  const totalLotsFound = await page.locator('tbody > tr').count();
-  const lotsToTestCount = Math.min(maxLots, totalLotsFound);
-  console.log(`\n[${productName}] 총 ${lotsToTestCount}개의 LOT를 대상으로 다운로드 테스트를 시작합니다.`);
+  if (count >= maxLots) {
+    console.log(`[정보] 목표 개수인 ${maxLots}개 이상(${count}개)을 찾았으므로 스크롤을 중단합니다.`);
+    break;
+  }
+  if (stagnant >= 3) {
+    console.log(`[정보] 3번 연속 스크롤해도 새 LOT가 없어 중단합니다. (총 ${count}개)`);
+    break;
+  }
+
+  // 핵심: 마지막 행을 화면에 보이게 하여 내부 스크롤 컨테이너를 움직입니다.
+  // await rows.last().scrollIntoViewIfNeeded();
+  //  await rows.first().hover();
+  // await page.mouse.wheel(0, 300);
+  await page.waitForTimeout(800);
+}
+
+const lotsToTestCount = Math.min(maxLots, await rows.count());
+console.log(`\n[${productName}] 총 ${lotsToTestCount}개의 LOT를 대상으로 다운로드 테스트를 시작합니다.`);
+
   
   // 페이지를 초기 상태로 되돌려 첫 번째 LOT부터 테스트를 준비합니다.
-  await page.reload({ waitUntil: 'networkidle' });
+  // await page.reload({ waitUntil: 'networkidle' });
   await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 30_000 });
 
-
-  // --- 2. 인덱스 기반으로 루프 실행 (핵심 수정 사항) ---
+  // --- 2. 인덱스 기반으로 다운로드 루프 실행 ---
   for (let i = 0; i < lotsToTestCount; i++) {
     let lotNumber = '알 수 없음';
     console.log(`\n[${i + 1}/${lotsToTestCount}] 테스트 처리 시작...`);
 
     try {
-      // **핵심 로직**: 매번 루프가 시작될 때마다 페이지 상태가 초기화되었다고 가정합니다.
-      // 따라서 i번째 요소를 찾기 위해 처음부터 다시 스크롤합니다.
+      // 매번 새로고침되므로, 목표(i번째) LOT가 보일 때까지 다시 스크롤합니다.
       let isTargetVisible = false;
-      while (!isTargetVisible) {
+      let scrollAttempts = 0;
+      while (!isTargetVisible && scrollAttempts < 10) { // 무한 루프 방지
         const currentVisibleCount = await page.locator('tbody > tr').count();
         if (i < currentVisibleCount) {
-          // i번째 요소가 현재 화면(DOM)에 로드되었으므로 스크롤 중단
           isTargetVisible = true;
         } else {
-          // 목표가 아직 로드되지 않았으므로 맨 아래로 스크롤하여 더 많은 항목을 불러옵니다.
           console.log(`[정보] ${i + 1}번째 LOT를 찾기 위해 스크롤합니다. (현재 ${currentVisibleCount}개)`);
-          await page.locator('tbody > tr').last().scrollIntoViewIfNeeded();
-          // 새 데이터가 로드될 시간을 줍니다.
-          await page.waitForTimeout(10000); 
+          // ✨ 여기도 마찬가지로 '마우스 휠' 스크롤을 사용합니다.
+          await page.mouse.wheel(0, 500);
+          await page.waitForTimeout(3000);
+          scrollAttempts++;
         }
       }
 
-      // 이제 i번째 요소가 확실히 로드되었으므로 해당 요소를 지정하여 테스트를 진행합니다.
       const targetRow = page.locator('tbody > tr').nth(i);
-      await targetRow.scrollIntoViewIfNeeded(); // 정확한 상호작용을 위해 뷰포트로 이동
+      await targetRow.scrollIntoViewIfNeeded(); // 상호작용 전 화면에 보이도록 최종 스크롤
 
       const lotNumberCell = targetRow.locator('td').nth(1);
-      await expect(lotNumberCell).toBeVisible({ timeout: 10_000 }); 
+      await expect(lotNumberCell).toBeVisible({ timeout: 10_000 });
       lotNumber = (await lotNumberCell.textContent()) || `[읽기 실패]`;
       console.log(`[정보] 대상: 제품=${productName}, LOT=${lotNumber} (인덱스: ${i})`);
 
       await targetRow.getByRole('button', { name: '출력' }).click();
 
-      // ▼▼▼ 이하 다운로드 및 파일 저장 로직은 기존과 동일합니다. ▼▼▼
+      // (이하 다운로드 로직은 기존과 동일)
       await page.waitForLoadState('networkidle', { timeout: 180_000 });
-
       const downloadButtons = page.getByRole('button', { name: new RegExp(`${productName} COA_.*\\.xlsx`) });
       await expect(downloadButtons.first()).toBeVisible({ timeout: 600_000 });
-
       const downloadPromise = page.waitForEvent('download');
       await downloadButtons.first().click();
       const download = await downloadPromise;
-
       const sanitizedLotNumber = lotNumber.replace(/[^a-zA-Z0-9.-]/g, '_');
       const fileExtension = path.extname(download.suggestedFilename()) || '.xlsx';
       const uniqueFileName = `${productName}_${sanitizedLotNumber}${fileExtension}`;
-      
       const downloadsPath = path.join(process.cwd(), 'downloads');
       if (!fs.existsSync(downloadsPath)) fs.mkdirSync(downloadsPath, { recursive: true });
       const filePath = path.join(downloadsPath, uniqueFileName);
       await download.saveAs(filePath);
-
       expect(fs.existsSync(filePath)).toBe(true);
       console.log(`[성공] 파일 다운로드 및 저장 완료: ${filePath}`);
       allTestResults.push({ status: 'success', productName, lotNumber, file: uniqueFileName });
@@ -149,23 +151,25 @@ async function runProductValidation(
       console.log(`디버깅을 위해 스크린샷 저장: ${screenshotPath}`);
       allTestResults.push({ status: 'failure', productName, lotNumber, error: (error as Error).message });
     } finally {
-      // 다음 LOT 테스트를 위해 페이지를 새로고침합니다. (루프 시작 시 어차피 초기화된 상태에서 시작)
       if (i < lotsToTestCount - 1) {
-        // 주석 처리하셨던 안정적인 새로고침 로직을 사용하는 것이 좋습니다.
+        // (안정적인 새로고침 로직은 기존과 동일)
         let reloadSuccess = false;
-        for (let attempt = 0; attempt < 3; attempt++) { 
+        for (let attempt = 0; attempt < 3; attempt++) {
           try {
             console.log(`[정보] ${lotNumber} 테스트 완료. 다음 LOT를 위해 페이지를 새로고침합니다... (시도 ${attempt + 1}/3)`);
             await page.reload({ waitUntil: 'networkidle', timeout: 120_000 });
             await expect(page.locator('tbody > tr').first()).toBeVisible({ timeout: 120_000 });
+            const rows = page.locator('tbody > tr');
+            await rows.first().hover();
+            await page.mouse.wheel(0, 300);
             console.log('[정보] 페이지 새로고침 및 UI 확인 완료.');
             reloadSuccess = true;
-            break; 
+            break;
           } catch (reloadError) {
             console.warn(`[경고] 새로고침 시도 ${attempt + 1} 실패: ${(reloadError as Error).message}`);
-            if (attempt < 2) { 
+            if (attempt < 2) {
               await page.waitForTimeout(5000);
-            } else { 
+            } else {
               const errorMessage = `페이지 새로고침에 3번 연속 실패했습니다: ${(reloadError as Error).message}`;
               console.error(`[심각] ${errorMessage}`);
               throw new Error(errorMessage);
