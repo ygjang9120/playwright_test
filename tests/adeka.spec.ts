@@ -3,9 +3,13 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 
+// adeka.spec.ts
+
+// ▼▼▼ 이 함수 전체를 교체하세요 ▼▼▼
 async function sendTelegramMessage(message: string) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
+  const threadId = process.env.TELEGRAM_THREAD_ID; // 스레드 ID 가져오기
 
   if (!botToken || !chatId) {
     console.warn('[경고] 텔레그램 BOT_TOKEN 또는 CHAT_ID가 설정되지 않았습니다.');
@@ -13,15 +17,24 @@ async function sendTelegramMessage(message: string) {
   }
 
   const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+  
+  // 메시지 본문(payload) 생성
+  const payload: any = {
+    chat_id: chatId,
+    text: message,
+    parse_mode: 'Markdown',
+  };
+
+  // 스레드 ID가 존재할 경우에만 payload에 추가
+  if (threadId) {
+    payload.message_thread_id = threadId;
+  }
+
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'Markdown',
-      }),
+      body: JSON.stringify(payload), // 수정된 payload 사용
     });
     if (!response.ok) {
       console.error(`[오류] 텔레그램 메시지 전송 실패: ${await response.text()}`);
@@ -32,6 +45,8 @@ async function sendTelegramMessage(message: string) {
     console.error(`[오류] 텔레그램 메시지 전송 중 네트워크 오류 발생:`, error);
   }
 }
+
+// ... (이하 나머지 코드는 모두 동일합니다) ...
 
 // .env 파일의 환경 변수를 로드합니다. (로컬 테스트용)
 dotenv.config();

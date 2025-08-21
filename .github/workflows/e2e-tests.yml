@@ -41,6 +41,7 @@ jobs:
           # ✨ 텔레그램 시크릿을 테스트 코드로 전달하는 것이 핵심입니다.
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_ID }}
           CI: true
         run: npx playwright test
 
