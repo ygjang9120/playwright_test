@@ -170,7 +170,18 @@ async function runProductValidation(
         await targetRow.getByRole('button', { name: '출력' }).click();
         
         await page.waitForLoadState('networkidle', { timeout: 180_000 });
-        const downloadButtons = page.getByRole('button', { name: new RegExp(`${productName} COA_.*\\.xlsx`) });
+        // const downloadButtons = page.getByRole('button', { name: new RegExp(`${productName} COA_.*\\.xlsx`) });
+        let downloadButtons; // <-- let으로 선언해서 분기 모두에서 재할당
+
+        if (productName === 'SFA-1 (HK-3)') {
+          // 화면에 표시된 .xlsx 버튼들 중 "맨 위" 것을 클릭
+          downloadButtons = page.getByRole('button', { name: /\.xlsx$/i });
+        } else {
+          // 기존 로직 유지
+          downloadButtons = page.getByRole('button', { 
+            name: new RegExp(`${productName} COA_.*\\.xlsx`) 
+          });
+        }
         await expect(downloadButtons.first()).toBeVisible({ timeout: 600_000 });
         
         const downloadPromise = page.waitForEvent('download');
@@ -255,6 +266,12 @@ test.describe('전체 LOT 대상 COA 다운로드 및 저장 검증', () => {
   });
 
   // 각 제품별 테스트 케이스 (최대 30개 LOT, 타임아웃 5시간)
+
+  test('SFA-1 제품의 최신 LOT 검증', async ({ browser }) => {
+    test.setTimeout(18000_000);
+    await runProductValidation(browser, 'SFA-1 (HK-3)', 'sfa-1-3', 30);
+  });
+  
   test('ACP-2 제품의 최신 LOT 검증', async ({ browser }) => {
     test.setTimeout(18000_000);
     await runProductValidation(browser, 'ACP-2', 'acp-2', 30);
