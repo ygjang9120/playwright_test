@@ -1,13 +1,12 @@
 name: ADEKA-COA Schedule Test
 on:
- workflow_dispatch:
+  workflow_dispatch:
     inputs:
       grep:
         description: 'Playwright ADEKA COA 테스트'
         required: false
         default: ''
   # schedule:
-    
   #   - cron: '0 8 * * *'
 
 jobs:
@@ -31,7 +30,7 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      # 테스트 실행. continue-on-error: true는 테스트가 실패해도 다음 단계를 계속 진행하게 합니다.
+      # 테스트 실행. 이제 이 단계 안에서 텔레그램 알림이 자동으로 전송됩니다.
       - name: Run Playwright tests
         id: playwright_test
         continue-on-error: true
@@ -39,29 +38,23 @@ jobs:
           ADEKA_ID: ${{ secrets.ADEKA_ID }}
           ADEKA_PASSWORD: ${{ secrets.ADEKA_PASSWORD }}
           BASE_URL: 'https://spc.adkk.co.kr:8091'
+          # ✨ 텔레그램 시크릿을 테스트 코드로 전달하는 것이 핵심입니다.
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           CI: true
-        # 중요: 테스트 결과 요약(summary.json)을 생성하도록 playwright.config.ts에 설정이 필요할 수 있습니다.
         run: npx playwright test
 
-      # [수정됨] 별도의 스크립트 파일을 실행하여 결과 요약 및 이슈 본문 생성
+      # (이슈 본문 생성 스크립트는 필요시 그대로 사용)
       - name: Summarize results and create issue body
         id: summarize
-        if: always() # 테스트 성공/실패 여부와 관계없이 항상 실행
+        if: always()
         run: node scripts/generate-issue-body.js
 
-      # --- 성공 알림 ---
-      - name: Notify Telegram - Success
-        if: steps.playwright_test.outcome == 'success'
-        run: |
-          # success-message.txt 파일의 내용을 읽어 MSG 변수에 저장
-          MSG=$(cat test-results/success-message.txt)
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d message_thread_id="${{ secrets.TELEGRAM_THREAD_ID }}" \
-            -d parse_mode=HTML \
-            --data-urlencode "text=${MSG}"
+      # ▼▼▼ 아래 2개의 텔레그램 알림 블록은 삭제되었습니다 ▼▼▼
+      # - name: Notify Telegram - Success ... (삭제)
+      # - name: Notify Telegram - Failure ... (삭제)
 
-      # [기존과 동일] 테스트 실패 시 GitHub 이슈 생성
+      # 테스트 전체 실행 중 하나라도 실패하면 GitHub 이슈를 생성하는 것은 유용하므로 유지합니다.
       - name: Create GitHub Issue on Failure
         if: steps.playwright_test.outcome == 'failure'
         uses: peter-evans/create-issue-from-file@v5
@@ -73,24 +66,7 @@ jobs:
             bug
             automated-test
       
-      - name: Notify Telegram - Failure
-        if: steps.playwright_test.outcome == 'failure'
-        run: |
-          # 1. Playwright가 미리 생성한 failure-message.txt 파일의 내용을 읽습니다.
-          MSG=$(cat test-results/failure-message.txt)
-          
-          # 2. 메시지에 GitHub Actions 실행 로그 링크를 추가합니다.
-          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MSG_WITH_LINK="<b>${MSG}</b>\n\n<a href=\"${RUN_URL}\">#${{ github.run_number }} 실행 로그/리포트 확인</a>"
-          
-          # 3. 최종 메시지를 텔레그램으로 전송합니다.
-          curl --fail -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-            -d message_thread_id="${{ secrets.TELEGRAM_THREAD_ID }}" \
-            -d parse_mode=HTML \
-            --data-urlencode "text=${MSG_WITH_LINK}"
-
-      # [기존과 동일] 아티팩트 업로드
+      # 테스트 리포트와 결과물은 항상 업로드합니다.
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
         if: always()
@@ -103,7 +79,7 @@ jobs:
             downloads/ 
           retention-days: 7
 
-      # [기존과 동일] 테스트 최종 상태 확인
+      # 테스트 단계가 전체적으로 실패했다면 워크플로우도 실패로 처리합니다.
       - name: Check test status
         if: steps.playwright_test.outcome == 'failure'
-        run: exit 1 # 테스트 단계가 실패했다면 워크플로우 전체를 실패 처리
+        run: exit 1
